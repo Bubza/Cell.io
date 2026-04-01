@@ -195,10 +195,13 @@ export class Bot extends Cell {
                     enter: () => { },
                     update: (owner, dt) => {
                         // Always re-evaluate nearest prey so we never chase a stale/eaten food position
-                        const prey = findNearestPrey(owner, 400, owner._playerRef, owner._botsRef, owner._foodRef);
+                        const prey = findNearestPrey(owner, 600, owner._playerRef, owner._botsRef, owner._foodRef);
                         owner.target = prey; // null if nothing found — triggers HUNT→WANDER next frame
                         if (owner.target) {
-                            owner.moveToward(owner.target.x, owner.target.y, dt);
+                            // If chasing a bot (has cells array), track its live center position
+                            const tx = owner.target.cells ? owner.target.centerX : owner.target.x;
+                            const ty = owner.target.cells ? owner.target.centerY : owner.target.y;
+                            owner.moveToward(tx, ty, dt);
                         }
                     },
                     exit: () => { }
@@ -332,7 +335,7 @@ export class Bot extends Cell {
                     from: 'WANDER',
                     to: 'HUNT',
                     condition: (owner) => {
-                        const prey = findNearestPrey(owner, 400, owner._playerRef, owner._botsRef, owner._foodRef);
+                        const prey = findNearestPrey(owner, 600, owner._playerRef, owner._botsRef, owner._foodRef);
                         if (prey) { owner.target = prey; return true; }
                         return false;
                     }

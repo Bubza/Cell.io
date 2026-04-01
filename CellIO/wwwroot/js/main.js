@@ -88,12 +88,13 @@ function checkCollisions() {
     for (const c of player.cells) {
         const cr = massToRadius(c.mass);
         for (const v of viruses) {
-            if (c.mass > v.mass && dist(c, v) < cr) {
+            if (c.mass > v.mass && dist(c, v) < cr + v.radius) {
                 playSound('virus');
                 const pieces = Math.min(8 - player.cells.length, 4);
                 if (pieces > 0) {
                     const shareMass = c.mass / (pieces + 1);
                     c.mass = shareMass;
+                    c.splitTime = Date.now();
                     for (let p = 0; p < pieces; p++) {
                         const angle = (Math.PI * 2 * p) / pieces;
                         player.cells.push({
@@ -118,9 +119,10 @@ function checkCollisions() {
         for (const pc of player.cells) {
             for (const bc of bot.cells) {
                 const d = dist(pc, bc);
-                const threshold = Math.max(massToRadius(pc.mass), massToRadius(bc.mass)) * 0.8;
+                const rP = massToRadius(pc.mass);
+                const rB = massToRadius(bc.mass);
 
-                if (d < threshold) {
+                if (d < rP + rB) {
                     if (pc.mass > bc.mass * 1.15) {
                         // Player eats bot cell
                         pc.mass += bc.mass;
@@ -150,7 +152,38 @@ function checkCollisions() {
         }
     }
 
-    // ── Bots eat food ──
+    // ── Bots vs viruses ──
+    for (const bot of bots) {
+        if (!bot.alive) continue;
+        for (const bc of bot.cells) {
+            const bcr = massToRadius(bc.mass);
+            for (const v of viruses) {
+                if (bc.mass > v.mass && dist(bc, v) < bcr + v.radius) {
+                    const pieces = Math.min(8 - bot.cells.length, 4);
+                    if (pieces > 0) {
+                        const shareMass = bc.mass / (pieces + 1);
+                        bc.mass = shareMass;
+                        bc.splitTime = Date.now();
+                        for (let p = 0; p < pieces; p++) {
+                            const angle = (Math.PI * 2 * p) / pieces;
+                            bot.cells.push({
+                                x: bc.x + Math.cos(angle) * bcr,
+                                y: bc.y + Math.sin(angle) * bcr,
+                                mass: shareMass,
+                                vx: Math.cos(angle) * 8,
+                                vy: Math.sin(angle) * 8,
+                                splitTime: Date.now()
+                            });
+                        }
+                    }
+                    spawnParticles(particles, v.x, v.y, '#5aff8a', 10);
+                    respawnVirus(v);
+                }
+            }
+        }
+    }
+
+
     for (const bot of bots) {
         if (!bot.alive) continue;
         for (const bc of bot.cells) {
@@ -169,27 +202,34 @@ function checkCollisions() {
         for (let j = i + 1; j < bots.length; j++) {
             const a = bots[i], b = bots[j];
             if (!a.alive || !b.alive) continue;
-            for (const ac of a.cells) {
-                for (const bc of b.cells) {
+            let outerBreak = false;
+            for (let ai = 0; ai < a.cells.length; ai++) {
+                if (outerBreak) break;
+                for (let bi = 0; bi < b.cells.length; bi++) {
+                    const ac = a.cells[ai];
+                    const bc = b.cells[bi];
                     const d = dist(ac, bc);
                     const rA = massToRadius(ac.mass);
                     const rB = massToRadius(bc.mass);
 
                     if (d < rA + rB) { // cells are overlapping
-                        if (ac.mass > bc.mass * 1.15) {
+                        if (ac.mass > bc.mass * 1.1) {
                             // A eats B cell
                             ac.mass += bc.mass;
                             spawnParticles(particles, bc.x, bc.y, b.color, 5);
-                            bc.mass = 0;
-                            b.cells = b.cells.filter(c => c.mass > 0);
+                            playSound('eat');
+                            b.cells.splice(bi, 1);
                             if (b.cells.length === 0) b.fsm.changeState('DEAD');
-                        } else if (bc.mass > ac.mass * 1.15) {
+                            break; // bc is gone, restart inner loop
+                        } else if (bc.mass > ac.mass * 1.1) {
                             // B eats A cell
                             bc.mass += ac.mass;
                             spawnParticles(particles, ac.x, ac.y, a.color, 5);
-                            ac.mass = 0;
-                            a.cells = a.cells.filter(c => c.mass > 0);
+                            playSound('eat');
+                            a.cells.splice(ai, 1);
                             if (a.cells.length === 0) a.fsm.changeState('DEAD');
+                            outerBreak = true; // ac is gone, restart outer loop
+                            break;
                         } else {
                             // Similar size — push apart so they don't visually merge/stack
                             const overlap = (rA + rB - d) / 2 + 1;
@@ -332,8 +372,12 @@ window.startGame = function () {
     // Create bot enemies with FSM AI
     bots = [];
     for (let i = 0; i < BOT_COUNT; i++) {
-        const x = Math.random() * WORLD_SIZE;
-        const y = Math.random() * WORLD_SIZE;
+        // Keep re-rolling until the bot spawns at least 800px from the player
+        let x, y;
+        do {
+            x = Math.random() * WORLD_SIZE;
+            y = Math.random() * WORLD_SIZE;
+        } while (Math.hypot(x - player.x, y - player.y) < 800);
         const mass = START_MASS + Math.random() * 60;
         const bot = new Bot(x, y, mass, randomColor(), randomName());
         bot.setWorldRefs(player, bots, food);

@@ -3,8 +3,8 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import {
-  randomColor, massToRadius,
-  WORLD_SIZE, FOOD_COUNT, VIRUS_COUNT, FOOD_MASS
+    randomColor, massToRadius,
+    WORLD_SIZE, FOOD_COUNT, VIRUS_COUNT, FOOD_MASS
 } from './utils.js';
 
 // ── FOOD ──
@@ -14,11 +14,11 @@ import {
  * @returns {Array}
  */
 export function createFood() {
-  const food = [];
-  for (let i = 0; i < FOOD_COUNT; i++) {
-    food.push(createFoodItem());
-  }
-  return food;
+    const food = [];
+    for (let i = 0; i < FOOD_COUNT; i++) {
+        food.push(createFoodItem());
+    }
+    return food;
 }
 
 /**
@@ -26,14 +26,14 @@ export function createFood() {
  * @returns {Object}
  */
 export function createFoodItem() {
-  return {
-    x: Math.random() * WORLD_SIZE,
-    y: Math.random() * WORLD_SIZE,
-    mass: FOOD_MASS,
-    color: randomColor(),
-    radius: 5 + Math.random() * 3,
-    ejected: false
-  };
+    return {
+        x: Math.random() * WORLD_SIZE,
+        y: Math.random() * WORLD_SIZE,
+        mass: FOOD_MASS,
+        color: randomColor(),
+        radius: 5 + Math.random() * 3,
+        ejected: false
+    };
 }
 
 // ── VIRUSES ──
@@ -43,17 +43,17 @@ export function createFoodItem() {
  * @returns {Array}
  */
 export function createViruses() {
-  const viruses = [];
-  for (let i = 0; i < VIRUS_COUNT; i++) {
-    viruses.push({
-      x: 200 + Math.random() * (WORLD_SIZE - 400),
-      y: 200 + Math.random() * (WORLD_SIZE - 400),
-      mass: 100,
-      radius: massToRadius(100),
-      spikes: 18 + Math.floor(Math.random() * 8)
-    });
-  }
-  return viruses;
+    const viruses = [];
+    for (let i = 0; i < VIRUS_COUNT; i++) {
+        viruses.push({
+            x: 200 + Math.random() * (WORLD_SIZE - 400),
+            y: 200 + Math.random() * (WORLD_SIZE - 400),
+            mass: 35,
+            radius: massToRadius(35),
+            spikes: 18 + Math.floor(Math.random() * 8)
+        });
+    }
+    return viruses;
 }
 
 /**
@@ -61,8 +61,10 @@ export function createViruses() {
  * @param {Object} virus
  */
 export function respawnVirus(virus) {
-  virus.x = 200 + Math.random() * (WORLD_SIZE - 400);
-  virus.y = 200 + Math.random() * (WORLD_SIZE - 400);
+    virus.x = 200 + Math.random() * (WORLD_SIZE - 400);
+    virus.y = 200 + Math.random() * (WORLD_SIZE - 400);
+    virus.mass = 35;
+    virus.radius = massToRadius(35);
 }
 
 // ── PARTICLES ──
@@ -76,19 +78,19 @@ export function respawnVirus(virus) {
  * @param {number} count
  */
 export function spawnParticles(particleArray, x, y, color, count) {
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 1 + Math.random() * 4;
-    particleArray.push({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 1,
-      color,
-      radius: 2 + Math.random() * 4
-    });
-  }
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 4;
+        particleArray.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            color,
+            radius: 2 + Math.random() * 4
+        });
+    }
 }
 
 /**
@@ -96,16 +98,16 @@ export function spawnParticles(particleArray, x, y, color, count) {
  * @param {Array} particles
  */
 export function updateParticles(particles) {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life -= 0.025;
-    p.vx *= 0.96;
-    p.vy *= 0.96;
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.025;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
 
-    if (p.life <= 0) {
-      particles.splice(i, 1);
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
     }
-  }
 }
