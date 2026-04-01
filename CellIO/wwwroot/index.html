@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMOEBA.IO — Survive the Petri Dish</title>
+    <title>CELL.IO — Devour or Be Devoured</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -52,15 +52,15 @@
         <div class="petri-ring petri-ring-2"></div>
         <div class="petri-ring petri-ring-3"></div>
 
-        <div class="game-title">AMOEBA.IO</div>
-        <div class="subtitle">Survive the Petri Dish</div>
+        <div class="game-title">CELL.IO</div>
+        <div class="subtitle">Devour or Be Devoured</div>
         <input class="name-input"
                id="player-name"
                type="text"
-               placeholder="Enter organism name"
+               placeholder="Enter your name"
                maxlength="16"
                autocomplete="off" />
-        <button class="btn" id="btn-play" onclick="startGame()">ENTER DISH</button>
+        <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
 
         <div class="bg-picker">
             <div class="bg-picker-label">CULTURE MEDIUM</div>
@@ -76,7 +76,7 @@
 
     <!-- ═══ GAME OVER SCREEN ═══ -->
     <div class="screen-overlay hidden" id="screen-gameover">
-        <div class="subtitle">Your Culture Was Consumed</div>
+        <div class="subtitle">You Were Consumed</div>
         <div class="go-score" id="go-score">0</div>
         <div class="go-label">Final Score</div>
         <button class="btn pink" onclick="restartGame()">PLAY AGAIN</button>
