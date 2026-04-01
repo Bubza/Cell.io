@@ -19,31 +19,56 @@ export function clearCanvas(ctx, W, H) {
     ctx.fillRect(0, 0, W, H);
 }
 
-/**
- * Draw the background grid.
- * @param {CanvasRenderingContext2D} ctx
- * @param {Object} cam - { x, y, zoom }
- * @param {number} W
- * @param {number} H
- */
 export function drawGrid(ctx, cam, W, H) {
-    const gridSize = 50;
-    const dotRadius = Math.max(1, 1.5 * cam.zoom);
+    const t = window.getBgTheme ? window.getBgTheme() : { dot: 'rgba(0,240,255,0.08)', bg: '#0a0e17' };
+    const isMicroscope = (window.bgTheme === 'microscope');
 
-    const startX = Math.floor((cam.x - W / 2 / cam.zoom) / gridSize) * gridSize;
-    const startY = Math.floor((cam.y - H / 2 / cam.zoom) / gridSize) * gridSize;
-    const endX = cam.x + W / 2 / cam.zoom;
-    const endY = cam.y + H / 2 / cam.zoom;
+    if (isMicroscope) {
+        // ── Microscope slide: warm beige base + faint grid lines + lens vignette ──
 
-    const t = window.getBgTheme ? window.getBgTheme() : { dot: 'rgba(0,240,255,0.08)' };
-    ctx.fillStyle = t.dot;
-    for (let x = startX; x <= endX; x += gridSize) {
-        for (let y = startY; y <= endY; y += gridSize) {
+        // Fine reticle grid (eyepiece measurement lines)
+        const gridSize = 60;
+        const startX = Math.floor((cam.x - W / 2 / cam.zoom) / gridSize) * gridSize;
+        const startY = Math.floor((cam.y - H / 2 / cam.zoom) / gridSize) * gridSize;
+        const endX = cam.x + W / 2 / cam.zoom;
+        const endY = cam.y + H / 2 / cam.zoom;
+
+        ctx.strokeStyle = 'rgba(100, 80, 40, 0.13)';
+        ctx.lineWidth = 0.8;
+        for (let x = startX; x <= endX; x += gridSize) {
             const sx = (x - cam.x) * cam.zoom + W / 2;
+            ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
+        }
+        for (let y = startY; y <= endY; y += gridSize) {
             const sy = (y - cam.y) * cam.zoom + H / 2;
-            ctx.beginPath();
-            ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
+        }
+
+        // Lens vignette — darker oval at edges like a microscope objective
+        const vignette = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.28, W / 2, H / 2, Math.min(W, H) * 0.72);
+        vignette.addColorStop(0, 'rgba(0,0,0,0)');
+        vignette.addColorStop(1, 'rgba(0,0,0,0.45)');
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, W, H);
+
+    } else {
+        // ── Standard dot grid ──
+        const gridSize = 50;
+        const dotRadius = Math.max(1, 1.5 * cam.zoom);
+        const startX = Math.floor((cam.x - W / 2 / cam.zoom) / gridSize) * gridSize;
+        const startY = Math.floor((cam.y - H / 2 / cam.zoom) / gridSize) * gridSize;
+        const endX = cam.x + W / 2 / cam.zoom;
+        const endY = cam.y + H / 2 / cam.zoom;
+
+        ctx.fillStyle = t.dot;
+        for (let x = startX; x <= endX; x += gridSize) {
+            for (let y = startY; y <= endY; y += gridSize) {
+                const sx = (x - cam.x) * cam.zoom + W / 2;
+                const sy = (y - cam.y) * cam.zoom + H / 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 }
@@ -90,13 +115,82 @@ export function drawFood(ctx, food, cam, W, H) {
         const sy = (f.y - cam.y) * cam.zoom + H / 2;
         const sr = (f.ejected ? f.radius : f.radius * 0.6) * cam.zoom;
 
-        // Frustum culling
         if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
 
-        ctx.beginPath();
-        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-        ctx.fillStyle = f.color + 'cc';
-        ctx.fill();
+        ctx.save();
+        ctx.translate(sx, sy);
+
+        const type = f.type || 'coccus';
+
+        if (f.ejected || type === 'coccus') {
+            // ── Round coccus bacterium — simple circle with slight inner glow ──
+            ctx.beginPath();
+            ctx.arc(0, 0, sr, 0, Math.PI * 2);
+            ctx.fillStyle = f.color + 'cc';
+            ctx.fill();
+            // Tiny highlight
+            ctx.beginPath();
+            ctx.arc(-sr * 0.25, -sr * 0.25, sr * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fill();
+
+        } else if (type === 'rod') {
+            // ── Rod-shaped bacterium — capsule / rounded rectangle ──
+            ctx.rotate(f.angle || 0);
+            const len = sr * 1.8;
+            const w = sr * 0.75;
+            ctx.beginPath();
+            ctx.roundRect(-len / 2, -w / 2, len, w, w / 2);
+            ctx.fillStyle = f.color + 'cc';
+            ctx.fill();
+            // Septum line (middle division)
+            ctx.beginPath();
+            ctx.moveTo(0, -w / 2);
+            ctx.lineTo(0, w / 2);
+            ctx.strokeStyle = f.color + '55';
+            ctx.lineWidth = Math.max(0.5, cam.zoom * 0.5);
+            ctx.stroke();
+
+        } else if (type === 'spirillum') {
+            // ── Spiral bacterium — wavy S-curve ──
+            ctx.rotate(f.angle || 0);
+            ctx.beginPath();
+            const steps = 20;
+            const totalLen = sr * 2.2;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const px = (t - 0.5) * totalLen;
+                const py = Math.sin(t * Math.PI * 2.5) * sr * 0.45;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = f.color + 'cc';
+            ctx.lineWidth = Math.max(1.5, sr * 0.55) * cam.zoom;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+        } else if (type === 'spore') {
+            // ── Spore — layered circles like a seed coat ──
+            // Outer coat (lighter)
+            ctx.beginPath();
+            ctx.arc(0, 0, sr, 0, Math.PI * 2);
+            ctx.fillStyle = f.color + '44';
+            ctx.fill();
+            ctx.strokeStyle = f.color + '88';
+            ctx.lineWidth = Math.max(1, sr * 0.18);
+            ctx.stroke();
+            // Inner spore body
+            ctx.beginPath();
+            ctx.arc(0, 0, sr * 0.62, 0, Math.PI * 2);
+            ctx.fillStyle = f.color + 'cc';
+            ctx.fill();
+            // Core
+            ctx.beginPath();
+            ctx.arc(0, 0, sr * 0.28, 0, Math.PI * 2);
+            ctx.fillStyle = f.color + 'ff';
+            ctx.fill();
+        }
+
+        ctx.restore();
     }
 }
 
@@ -109,6 +203,7 @@ export function drawFood(ctx, food, cam, W, H) {
  * @param {number} H
  */
 export function drawViruses(ctx, viruses, cam, W, H) {
+    const now = Date.now() / 1000;
     for (const v of viruses) {
         const sx = (v.x - cam.x) * cam.zoom + W / 2;
         const sy = (v.y - cam.y) * cam.zoom + H / 2;
@@ -116,21 +211,68 @@ export function drawViruses(ctx, viruses, cam, W, H) {
 
         if (sx + sr < -50 || sx - sr > W + 50 || sy + sr < -50 || sy - sr > H + 50) continue;
 
-        // Draw spiky polygon
+        ctx.save();
+        ctx.translate(sx, sy);
+
+        const spikes = v.spikes || 18;
+
+        // ── Outer halo glow ──
+        const halo = ctx.createRadialGradient(0, 0, sr * 0.6, 0, 0, sr * 1.6);
+        halo.addColorStop(0, 'rgba(180, 255, 80, 0.12)');
+        halo.addColorStop(1, 'rgba(180, 255, 80, 0.00)');
         ctx.beginPath();
-        for (let i = 0; i < v.spikes * 2; i++) {
-            const angle = (i * Math.PI) / v.spikes;
-            const r = i % 2 === 0 ? sr * 1.15 : sr * 0.85;
-            const px = sx + Math.cos(angle) * r;
-            const py = sy + Math.sin(angle) * r;
-            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(90, 255, 138, 0.15)';
+        ctx.arc(0, 0, sr * 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = halo;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(90, 255, 138, 0.5)';
-        ctx.lineWidth = 2 * cam.zoom;
+
+        // ── Spike proteins (surface proteins radiating outward) ──
+        for (let i = 0; i < spikes; i++) {
+            const angle = (i / spikes) * Math.PI * 2 + now * 0.12;
+            const wobble = 1 + 0.07 * Math.sin(now * 2.5 + i * 1.3);
+            const innerR = sr * 0.88;
+            const outerR = sr * (1.18 + 0.08 * Math.sin(i * 2.1)) * wobble;
+            const bulbR = sr * 0.095;
+
+            // Spike stalk
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
+            ctx.lineTo(Math.cos(angle) * (outerR - bulbR * 1.2), Math.sin(angle) * (outerR - bulbR * 1.2));
+            ctx.strokeStyle = 'rgba(160, 255, 80, 0.65)';
+            ctx.lineWidth = Math.max(1, sr * 0.055);
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Bulb at tip (spike protein head)
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * outerR, Math.sin(angle) * outerR, bulbR, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200, 255, 100, 0.8)';
+            ctx.fill();
+        }
+
+        // ── Capsid (main body) ──
+        const bodyGrad = ctx.createRadialGradient(-sr * 0.2, -sr * 0.2, 0, 0, 0, sr);
+        bodyGrad.addColorStop(0, 'rgba(140, 255, 80, 0.35)');
+        bodyGrad.addColorStop(0.7, 'rgba(60, 200, 40, 0.20)');
+        bodyGrad.addColorStop(1, 'rgba(30, 140, 20, 0.08)');
+        ctx.beginPath();
+        ctx.arc(0, 0, sr * 0.88, 0, Math.PI * 2);
+        ctx.fillStyle = bodyGrad;
+        ctx.fill();
+
+        // Capsid border
+        ctx.beginPath();
+        ctx.arc(0, 0, sr * 0.88, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(120, 255, 60, 0.55)';
+        ctx.lineWidth = Math.max(1, sr * 0.06);
         ctx.stroke();
+
+        // ── RNA core (inner genetic material) ──
+        ctx.beginPath();
+        ctx.arc(sr * 0.08, sr * 0.05, sr * 0.32, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(200, 255, 120, 0.18)';
+        ctx.fill();
+
+        ctx.restore();
     }
 }
 

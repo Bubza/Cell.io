@@ -465,34 +465,67 @@ canvas#gameCanvas {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.2);
+    border: none;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
+    transition: transform 0.15s;
 }
 
-    .bg-swatch[data-theme="white"] {
-        background: radial-gradient(circle, #ffffff, #cccccc);
-    }
-
-    .bg-swatch[data-theme="dark"] {
-        background: radial-gradient(circle, #1a2540, #0a0e17);
-    }
-
-    .bg-swatch[data-theme="ocean"] {
-        background: radial-gradient(circle, #0a2a5a, #071428);
-    }
-
-    .bg-swatch[data-theme="forest"] {
-        background: radial-gradient(circle, #0d3018, #071a0d);
-    }
-
     .bg-swatch:hover {
-        transform: scale(1.2);
-        border-color: rgba(255,255,255,0.5);
+        transform: scale(1.25);
     }
 
     .bg-swatch.active {
         transform: scale(1.15);
-        border-color: #fff;
-        box-shadow: 0 0 8px rgba(255,255,255,0.5);
+        outline: 2px solid #fff;
+        outline-offset: 2px;
     }
+
+/* ── Petri dish ring decorations on menu ── */
+.petri-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 240, 255, 0.07);
+    pointer-events: none;
+    animation: petri-pulse 6s ease-in-out infinite;
+}
+
+.petri-ring-1 {
+    width: 420px;
+    height: 420px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: 0s;
+}
+
+.petri-ring-2 {
+    width: 680px;
+    height: 680px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: 2s;
+    border-color: rgba(0, 240, 255, 0.04);
+}
+
+.petri-ring-3 {
+    width: 940px;
+    height: 940px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: 4s;
+    border-color: rgba(0, 240, 255, 0.02);
+}
+
+@keyframes petri-pulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.015);
+    }
+}

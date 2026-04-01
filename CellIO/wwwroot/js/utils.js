@@ -25,11 +25,12 @@ export const CELL_COLORS = [
 
 // ── BOT NAMES ──
 export const BOT_NAMES = [
-    'Blob', 'Nom', 'Devour', 'Gobble', 'Munch', 'Chomp',
-    'Gulp', 'Nibble', 'Snack', 'Feast', 'Gloop', 'Ooze',
-    'Splat', 'Jelly', 'Plop', 'Slurp', 'Bloop', 'Fizz',
-    'Morph', 'Flux', 'Drift', 'Nova', 'Pixel', 'Byte',
-    'Void', 'Echo', 'Glitch', 'Neon', 'Pulse', 'Surge'
+    'Amoeba', 'Paramecium', 'Vorticella', 'Euglena', 'Stentor',
+    'Didinium', 'Blepharisma', 'Volvox', 'Chaos', 'Pelomyxa',
+    'Arcella', 'Difflugia', 'Radiolaria', 'Naegleria', 'Acanthamoeba',
+    'Spirostomum', 'Colpoda', 'Tetrahymena', 'Oxytricha', 'Stylonychia',
+    'Entamoeba', 'Dictyostelium', 'Physarum', 'Plasmodium', 'Labyrinthula',
+    'Actinophrys', 'Heliozoa', 'Foraminifera', 'Giardia', 'Trypanosoma'
 ];
 
 // ── MATH UTILITIES ──

@@ -31,7 +31,7 @@ export class Cell {
         this.alive = true;
 
         // Multi-cell array: each sub-cell has its own position and mass
-        this.cells = [{ x, y, mass, vx: 0, vy: 0, splitTime: 0, wobbleSeed: Math.random() * Math.PI * 2, wobblePhase: Math.random() * Math.PI * 2 }];
+        this.cells = [{ x, y, mass, vx: 0, vy: 0, splitTime: 0, wobbleSeed: Math.random() * Math.PI * 2, wobblePhase: Math.random() * Math.PI * 2, trail: [] }];
     }
 
     /** Total mass across all sub-cells */
@@ -154,7 +154,8 @@ export class Cell {
                 vy: (dy / d) * 10,
                 splitTime: Date.now(),
                 wobbleSeed: Math.random() * Math.PI * 2,
-                wobblePhase: Math.random() * Math.PI * 2
+                wobblePhase: Math.random() * Math.PI * 2,
+                trail: []
             };
 
             c.splitTime = Date.now();
@@ -227,6 +228,26 @@ export class Cell {
 
             const seed = c.wobbleSeed || 0;
             const phase = c.wobblePhase || 0;
+
+            // ── Slime trail ──
+            if (!c.trail) c.trail = [];
+            // Record position every frame; cap trail length
+            const TRAIL_MAX = 18;
+            c.trail.push({ x: sx, y: sy, r: baseR });
+            if (c.trail.length > TRAIL_MAX) c.trail.shift();
+
+            // Draw trail blobs from oldest (faintest) to newest (slightly visible)
+            for (let t = 0; t < c.trail.length; t++) {
+                const tp = c.trail[t];
+                const progress = t / c.trail.length;           // 0 = oldest, 1 = newest
+                const alpha = progress * 0.22;                  // max 22% opacity
+                const tr = tp.r * (0.35 + progress * 0.45);    // grows as it approaches cell
+                ctx.beginPath();
+                ctx.arc(tp.x, tp.y, tr, 0, Math.PI * 2);
+                const hexAlpha = Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                ctx.fillStyle = this.color + hexAlpha;
+                ctx.fill();
+            }
 
             // ── Pulse: gentle breathe in/out ──
             const pulse = 1 + 0.025 * Math.sin(now * 1.8 + seed);

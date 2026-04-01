@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CELL.IO — Devour or Be Devoured</title>
+    <title>AMOEBA.IO — Survive the Petri Dish</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -46,30 +46,37 @@
 
     <!-- ═══ MAIN MENU SCREEN ═══ -->
     <div class="screen-overlay" id="screen-menu">
-        <div class="game-title">CELL.IO</div>
-        <div class="subtitle">Devour or Be Devoured</div>
+
+        <!-- Petri dish ring decoration -->
+        <div class="petri-ring petri-ring-1"></div>
+        <div class="petri-ring petri-ring-2"></div>
+        <div class="petri-ring petri-ring-3"></div>
+
+        <div class="game-title">AMOEBA.IO</div>
+        <div class="subtitle">Survive the Petri Dish</div>
         <input class="name-input"
                id="player-name"
                type="text"
-               placeholder="Enter your name"
+               placeholder="Enter organism name"
                maxlength="16"
                autocomplete="off" />
-        <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
+        <button class="btn" id="btn-play" onclick="startGame()">ENTER DISH</button>
 
         <div class="bg-picker">
-            <div class="bg-picker-label">MAP STYLE</div>
+            <div class="bg-picker-label">CULTURE MEDIUM</div>
             <div class="bg-swatches">
-                <div class="bg-swatch" data-theme="white" title="White"></div>
-                <div class="bg-swatch active" data-theme="dark" title="Dark"></div>
-                <div class="bg-swatch" data-theme="ocean" title="Ocean"></div>
-                <div class="bg-swatch" data-theme="forest" title="Forest"></div>
+                <div class="bg-swatch" data-theme="white" title="Agar (White)"></div>
+                <div class="bg-swatch active" data-theme="dark" title="Dark Field"></div>
+                <div class="bg-swatch" data-theme="microscope" title="Microscope Slide"></div>
+                <div class="bg-swatch" data-theme="ocean" title="Saline"></div>
+                <div class="bg-swatch" data-theme="forest" title="Nutrient Broth"></div>
             </div>
         </div>
     </div>
 
     <!-- ═══ GAME OVER SCREEN ═══ -->
     <div class="screen-overlay hidden" id="screen-gameover">
-        <div class="subtitle">You Were Consumed</div>
+        <div class="subtitle">Your Culture Was Consumed</div>
         <div class="go-score" id="go-score">0</div>
         <div class="go-label">Final Score</div>
         <button class="btn pink" onclick="restartGame()">PLAY AGAIN</button>
@@ -84,21 +91,34 @@
     </div>
 
     <script>
-        window.bgTheme = 'dark'; // default
+        window.bgTheme = 'dark';
         const BG_THEMES = {
-            white: { bg: '#f5f5f5', dot: 'rgba(180,180,180,0.6)', outside: 'rgba(220,220,220,0.6)' },
+            white: { bg: '#f0ede6', dot: 'rgba(160,140,100,0.35)', outside: 'rgba(200,195,180,0.5)' },
             dark: { bg: '#0a0e17', dot: 'rgba(0,240,255,0.08)', outside: 'rgba(5,7,12,0.7)' },
+            microscope: { bg: '#e8e0cc', dot: 'rgba(100,80,40,0.13)', outside: 'rgba(180,165,130,0.55)' },
             ocean: { bg: '#071428', dot: 'rgba(0,150,255,0.15)', outside: 'rgba(3,8,18,0.7)' },
             forest: { bg: '#071a0d', dot: 'rgba(90,255,138,0.15)', outside: 'rgba(3,10,5,0.7)' },
         };
         window.getBgTheme = () => BG_THEMES[window.bgTheme];
 
+        // Swatch inline styles per theme
+        const SWATCH_STYLES = {
+            white: 'background: radial-gradient(circle, #d9d3c5, #b0a890); box-shadow: 0 0 0 2px rgba(160,140,100,0.8)',
+            dark: 'background: radial-gradient(circle, #1a2035, #0a0e17); box-shadow: 0 0 0 2px rgba(0,240,255,0.7)',
+            microscope: 'background: radial-gradient(circle, #d4c9a0, #8b7d50); box-shadow: 0 0 0 2px rgba(180,150,60,0.8)',
+            ocean: 'background: radial-gradient(circle, #0d2850, #071428); box-shadow: 0 0 0 2px rgba(0,150,255,0.7)',
+            forest: 'background: radial-gradient(circle, #0d3318, #071a0d); box-shadow: 0 0 0 2px rgba(90,255,138,0.7)',
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.bg-swatch').forEach(s => {
+                const theme = s.dataset.theme;
+                s.style.cssText = SWATCH_STYLES[theme] || '';
+
                 s.addEventListener('click', () => {
                     document.querySelectorAll('.bg-swatch').forEach(x => x.classList.remove('active'));
                     s.classList.add('active');
-                    window.bgTheme = s.dataset.theme;
+                    window.bgTheme = theme;
                 });
             });
         });
