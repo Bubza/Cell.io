@@ -140,7 +140,7 @@ export class Bot extends Cell {
         };
         this.splitCooldown = 0;      // Frames until split is available again
         this.respawnTimer = 0;       // Frames until respawn
-        this.aggressionLevel = 0.3 + Math.random() * 0.7; // Personality trait
+        this.aggressionLevel = Math.random(); // 0.0–1.0; only bots above 0.8 will go AGGRESSIVE
 
         // References set by the game manager
         this._playerRef = null;
@@ -346,8 +346,9 @@ export class Bot extends Cell {
                         const p = owner._playerRef;
                         if (!p || !p.alive) return false;
                         const d = dist(owner, p);
-                        if (d < 500 && owner.totalMass > p.totalMass * 1.15 && owner.aggressionLevel > 0.6) {
-                            owner.target = { x: p.centerX, y: p.centerY }; // Lock onto player
+                        // Must be significantly bigger, close, AND a rare high-aggression bot
+                        if (d < 350 && owner.totalMass > p.totalMass * 1.4 && owner.aggressionLevel > 0.8) {
+                            owner.target = { x: p.centerX, y: p.centerY };
                             return true;
                         }
                         return false;
@@ -360,8 +361,9 @@ export class Bot extends Cell {
                         const p = owner._playerRef;
                         if (!p || !p.alive) return false;
                         const d = dist(owner, p);
-                        if (d < 350 && owner.totalMass > p.totalMass * 1.3 && owner.aggressionLevel > 0.7) {
-                            owner.target = { x: p.centerX, y: p.centerY }; // Lock onto player
+                        // Only very close and very dominant bots with high aggression
+                        if (d < 250 && owner.totalMass > p.totalMass * 1.6 && owner.aggressionLevel > 0.85) {
+                            owner.target = { x: p.centerX, y: p.centerY };
                             return true;
                         }
                         return false;
