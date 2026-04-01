@@ -65,8 +65,9 @@
         <div class="bg-picker">
             <div class="bg-picker-label">CULTURE MEDIUM</div>
             <div class="bg-swatches">
+                <div class="bg-swatch active" data-theme="petri" title="Petri Dish"></div>
                 <div class="bg-swatch" data-theme="white" title="Agar (White)"></div>
-                <div class="bg-swatch active" data-theme="dark" title="Dark Field"></div>
+                <div class="bg-swatch" data-theme="dark" title="Dark Field"></div>
                 <div class="bg-swatch" data-theme="microscope" title="Microscope Slide"></div>
                 <div class="bg-swatch" data-theme="ocean" title="Saline"></div>
                 <div class="bg-swatch" data-theme="forest" title="Nutrient Broth"></div>
@@ -91,8 +92,9 @@
     </div>
 
     <script>
-        window.bgTheme = 'dark';
+        window.bgTheme = 'petri';
         const BG_THEMES = {
+            petri: { bg: '#c4b86a', dot: 'rgba(100,85,20,0.14)', outside: 'rgba(10,10,14,0.82)' },
             white: { bg: '#f0ede6', dot: 'rgba(160,140,100,0.35)', outside: 'rgba(200,195,180,0.5)' },
             dark: { bg: '#0a0e17', dot: 'rgba(0,240,255,0.08)', outside: 'rgba(5,7,12,0.7)' },
             microscope: { bg: '#e8e0cc', dot: 'rgba(100,80,40,0.13)', outside: 'rgba(180,165,130,0.55)' },
@@ -103,6 +105,7 @@
 
         // Swatch inline styles per theme
         const SWATCH_STYLES = {
+            petri: 'background: radial-gradient(circle, #d6c97a, #8a7d38); box-shadow: 0 0 0 2px rgba(180,155,50,0.9)',
             white: 'background: radial-gradient(circle, #d9d3c5, #b0a890); box-shadow: 0 0 0 2px rgba(160,140,100,0.8)',
             dark: 'background: radial-gradient(circle, #1a2035, #0a0e17); box-shadow: 0 0 0 2px rgba(0,240,255,0.7)',
             microscope: 'background: radial-gradient(circle, #d4c9a0, #8b7d50); box-shadow: 0 0 0 2px rgba(180,150,60,0.8)',
