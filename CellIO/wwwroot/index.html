@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CELL.IO — Devour or Be Devoured</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Custom Cursor -->
+  <div id="cursor"></div>
+
+  <!-- Game Canvas (HTML5 Canvas for all rendering) -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD Overlay (score, leaderboard, minimap, controls) -->
+  <div id="hud" class="hidden">
+    <div class="hud-score" id="hud-score">0</div>
+    <div class="hud-mass" id="hud-mass">MASS</div>
+
+    <button class="hud-sound" id="sound-toggle">SOUND: ON</button>
+
+    <div class="hud-leaderboard">
+      <h3>Leaderboard</h3>
+      <div id="leaderboard-list"></div>
+    </div>
+
+    <div class="hud-minimap">
+      <canvas id="minimap-canvas" width="160" height="160"></canvas>
+    </div>
+
+    <div class="hud-controls">
+      <span>Mouse</span> Move<br>
+      <span>Click</span> Split<br>
+      <span>W</span> Eject Mass<br>
+      <span>Scroll</span> Zoom<br>
+      <span>ESC</span> Pause
+    </div>
+
+    <div class="hud-fsm-debug" id="fsm-debug">
+      <h4>Bot AI States</h4>
+      <div id="fsm-debug-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN MENU SCREEN ═══ -->
+  <div class="screen-overlay" id="screen-menu">
+    <div class="game-title">CELL.IO</div>
+    <div class="subtitle">Devour or Be Devoured</div>
+    <input
+      class="name-input"
+      id="player-name"
+      type="text"
+      placeholder="Enter your name"
+      maxlength="16"
+      autocomplete="off"
+    />
+    <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
+  </div>
+
+  <!-- ═══ GAME OVER SCREEN ═══ -->
+  <div class="screen-overlay hidden" id="screen-gameover">
+    <div class="subtitle">You Were Consumed</div>
+    <div class="go-score" id="go-score">0</div>
+    <div class="go-label">Final Score</div>
+    <button class="btn pink" onclick="restartGame()">PLAY AGAIN</button>
+    <button class="btn" onclick="backToMenu()">MENU</button>
+  </div>
+
+  <!-- ═══ PAUSE SCREEN ═══ -->
+  <div class="screen-overlay hidden" id="screen-pause">
+    <div class="pause-title">PAUSED</div>
+    <button class="btn" onclick="resumeGame()">RESUME</button>
+    <button class="btn pink" onclick="backToMenu()">QUIT</button>
+  </div>
+
+  <!-- Load game via ES6 modules -->
+  <script type="module" src="js/main.js"></script>
+
+</body>
+</html>
