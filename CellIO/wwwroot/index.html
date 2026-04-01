@@ -1,82 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CELL.IO — Devour or Be Devoured</title>
-  <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CELL.IO — Devour or Be Devoured</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- Custom Cursor -->
-  <div id="cursor"></div>
+    <!-- Custom Cursor -->
+    <div id="cursor"></div>
 
-  <!-- Game Canvas (HTML5 Canvas for all rendering) -->
-  <canvas id="gameCanvas"></canvas>
+    <!-- Game Canvas (HTML5 Canvas for all rendering) -->
+    <canvas id="gameCanvas"></canvas>
 
-  <!-- HUD Overlay (score, leaderboard, minimap, controls) -->
-  <div id="hud" class="hidden">
-    <div class="hud-score" id="hud-score">0</div>
-    <div class="hud-mass" id="hud-mass">MASS</div>
+    <!-- HUD Overlay (score, leaderboard, minimap, controls) -->
+    <div id="hud" class="hidden">
+        <div class="hud-score" id="hud-score">0</div>
+        <div class="hud-mass" id="hud-mass">MASS</div>
 
-    <button class="hud-sound" id="sound-toggle">SOUND: ON</button>
+        <button class="hud-sound" id="sound-toggle">SOUND: ON</button>
 
-    <div class="hud-leaderboard">
-      <h3>Leaderboard</h3>
-      <div id="leaderboard-list"></div>
+        <div class="hud-leaderboard">
+            <h3>Leaderboard</h3>
+            <div id="leaderboard-list"></div>
+        </div>
+
+        <div class="hud-minimap">
+            <canvas id="minimap-canvas" width="160" height="160"></canvas>
+        </div>
+
+        <div class="hud-controls">
+            <span>Mouse</span> Move<br>
+            <span>Click</span> Split<br>
+            <span>W</span> Eject Mass<br>
+            <span>Scroll</span> Zoom<br>
+            <span>ESC</span> Pause
+        </div>
+
+        <div class="hud-fsm-debug" id="fsm-debug">
+            <h4>Bot AI States</h4>
+            <div id="fsm-debug-list"></div>
+        </div>
     </div>
 
-    <div class="hud-minimap">
-      <canvas id="minimap-canvas" width="160" height="160"></canvas>
+    <!-- ═══ MAIN MENU SCREEN ═══ -->
+    <div class="screen-overlay" id="screen-menu">
+        <div class="game-title">CELL.IO</div>
+        <div class="subtitle">Devour or Be Devoured</div>
+        <input class="name-input"
+               id="player-name"
+               type="text"
+               placeholder="Enter your name"
+               maxlength="16"
+               autocomplete="off" />
+        <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
+
+        <div class="bg-picker">
+            <div class="bg-picker-label">MAP STYLE</div>
+            <div class="bg-swatches">
+                <div class="bg-swatch" data-theme="white" title="White"></div>
+                <div class="bg-swatch active" data-theme="dark" title="Dark"></div>
+                <div class="bg-swatch" data-theme="ocean" title="Ocean"></div>
+                <div class="bg-swatch" data-theme="forest" title="Forest"></div>
+            </div>
+        </div>
     </div>
 
-    <div class="hud-controls">
-      <span>Mouse</span> Move<br>
-      <span>Click</span> Split<br>
-      <span>W</span> Eject Mass<br>
-      <span>Scroll</span> Zoom<br>
-      <span>ESC</span> Pause
+    <!-- ═══ GAME OVER SCREEN ═══ -->
+    <div class="screen-overlay hidden" id="screen-gameover">
+        <div class="subtitle">You Were Consumed</div>
+        <div class="go-score" id="go-score">0</div>
+        <div class="go-label">Final Score</div>
+        <button class="btn pink" onclick="restartGame()">PLAY AGAIN</button>
+        <button class="btn" onclick="backToMenu()">MENU</button>
     </div>
 
-    <div class="hud-fsm-debug" id="fsm-debug">
-      <h4>Bot AI States</h4>
-      <div id="fsm-debug-list"></div>
+    <!-- ═══ PAUSE SCREEN ═══ -->
+    <div class="screen-overlay hidden" id="screen-pause">
+        <div class="pause-title">PAUSED</div>
+        <button class="btn" onclick="resumeGame()">RESUME</button>
+        <button class="btn pink" onclick="backToMenu()">QUIT</button>
     </div>
-  </div>
 
-  <!-- ═══ MAIN MENU SCREEN ═══ -->
-  <div class="screen-overlay" id="screen-menu">
-    <div class="game-title">CELL.IO</div>
-    <div class="subtitle">Devour or Be Devoured</div>
-    <input
-      class="name-input"
-      id="player-name"
-      type="text"
-      placeholder="Enter your name"
-      maxlength="16"
-      autocomplete="off"
-    />
-    <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
-  </div>
+    <script>
+        window.bgTheme = 'dark'; // default
+        const BG_THEMES = {
+            white: { bg: '#f5f5f5', dot: 'rgba(180,180,180,0.6)', outside: 'rgba(220,220,220,0.6)' },
+            dark: { bg: '#0a0e17', dot: 'rgba(0,240,255,0.08)', outside: 'rgba(5,7,12,0.7)' },
+            ocean: { bg: '#071428', dot: 'rgba(0,150,255,0.15)', outside: 'rgba(3,8,18,0.7)' },
+            forest: { bg: '#071a0d', dot: 'rgba(90,255,138,0.15)', outside: 'rgba(3,10,5,0.7)' },
+        };
+        window.getBgTheme = () => BG_THEMES[window.bgTheme];
 
-  <!-- ═══ GAME OVER SCREEN ═══ -->
-  <div class="screen-overlay hidden" id="screen-gameover">
-    <div class="subtitle">You Were Consumed</div>
-    <div class="go-score" id="go-score">0</div>
-    <div class="go-label">Final Score</div>
-    <button class="btn pink" onclick="restartGame()">PLAY AGAIN</button>
-    <button class="btn" onclick="backToMenu()">MENU</button>
-  </div>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.bg-swatch').forEach(s => {
+                s.addEventListener('click', () => {
+                    document.querySelectorAll('.bg-swatch').forEach(x => x.classList.remove('active'));
+                    s.classList.add('active');
+                    window.bgTheme = s.dataset.theme;
+                });
+            });
+        });
+    </script>
 
-  <!-- ═══ PAUSE SCREEN ═══ -->
-  <div class="screen-overlay hidden" id="screen-pause">
-    <div class="pause-title">PAUSED</div>
-    <button class="btn" onclick="resumeGame()">RESUME</button>
-    <button class="btn pink" onclick="backToMenu()">QUIT</button>
-  </div>
-
-  <!-- Load game via ES6 modules -->
-  <script type="module" src="js/main.js"></script>
+    <!-- Load game via ES6 modules -->
+    <script type="module" src="js/main.js"></script>
 
 </body>
 </html>

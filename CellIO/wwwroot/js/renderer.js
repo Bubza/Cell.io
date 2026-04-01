@@ -14,8 +14,9 @@ import { massToRadius, WORLD_SIZE } from './utils.js';
  * @param {number} H - Canvas height
  */
 export function clearCanvas(ctx, W, H) {
-  ctx.fillStyle = '#0a0e17';
-  ctx.fillRect(0, 0, W, H);
+    const t = window.getBgTheme ? window.getBgTheme() : { bg: '#0a0e17' };
+    ctx.fillStyle = t.bg;
+    ctx.fillRect(0, 0, W, H);
 }
 
 /**
@@ -26,27 +27,25 @@ export function clearCanvas(ctx, W, H) {
  * @param {number} H
  */
 export function drawGrid(ctx, cam, W, H) {
-  const gridSize = 60;
-  ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
-  ctx.lineWidth = 1;
+    const gridSize = 50;
+    const dotRadius = Math.max(1, 1.5 * cam.zoom);
 
-  const startX = Math.floor((cam.x - W / 2 / cam.zoom) / gridSize) * gridSize;
-  const startY = Math.floor((cam.y - H / 2 / cam.zoom) / gridSize) * gridSize;
-  const endX = cam.x + W / 2 / cam.zoom;
-  const endY = cam.y + H / 2 / cam.zoom;
+    const startX = Math.floor((cam.x - W / 2 / cam.zoom) / gridSize) * gridSize;
+    const startY = Math.floor((cam.y - H / 2 / cam.zoom) / gridSize) * gridSize;
+    const endX = cam.x + W / 2 / cam.zoom;
+    const endY = cam.y + H / 2 / cam.zoom;
 
-  ctx.beginPath();
-  for (let x = startX; x <= endX; x += gridSize) {
-    const sx = (x - cam.x) * cam.zoom + W / 2;
-    ctx.moveTo(sx, 0);
-    ctx.lineTo(sx, H);
-  }
-  for (let y = startY; y <= endY; y += gridSize) {
-    const sy = (y - cam.y) * cam.zoom + H / 2;
-    ctx.moveTo(0, sy);
-    ctx.lineTo(W, sy);
-  }
-  ctx.stroke();
+    const t = window.getBgTheme ? window.getBgTheme() : { dot: 'rgba(0,240,255,0.08)' };
+    ctx.fillStyle = t.dot;
+    for (let x = startX; x <= endX; x += gridSize) {
+        for (let y = startY; y <= endY; y += gridSize) {
+            const sx = (x - cam.x) * cam.zoom + W / 2;
+            const sy = (y - cam.y) * cam.zoom + H / 2;
+            ctx.beginPath();
+            ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
 }
 
 /**
@@ -57,23 +56,24 @@ export function drawGrid(ctx, cam, W, H) {
  * @param {number} H
  */
 export function drawWorldBorder(ctx, cam, W, H) {
-  const z = cam.zoom;
-  const x = (0 - cam.x) * z + W / 2;
-  const y = (0 - cam.y) * z + H / 2;
-  const w = WORLD_SIZE * z;
-  const h = WORLD_SIZE * z;
+    const z = cam.zoom;
+    const x = (0 - cam.x) * z + W / 2;
+    const y = (0 - cam.y) * z + H / 2;
+    const w = WORLD_SIZE * z;
+    const h = WORLD_SIZE * z;
 
-  // Border line
-  ctx.strokeStyle = 'rgba(255, 45, 117, 0.35)';
-  ctx.lineWidth = 3 * z;
-  ctx.strokeRect(x, y, w, h);
+    // Border line
+    ctx.strokeStyle = 'rgba(180, 180, 180, 0.8)';
+    ctx.lineWidth = 3 * z;
+    ctx.strokeRect(x, y, w, h);
 
-  // Darken areas outside the world
-  ctx.fillStyle = 'rgba(10, 14, 23, 0.7)';
-  ctx.fillRect(0, 0, W, Math.max(0, y));                // Top
-  ctx.fillRect(0, y + h, W, H - y - h);                 // Bottom
-  ctx.fillRect(0, y, Math.max(0, x), h);                // Left
-  ctx.fillRect(x + w, y, W - x - w, h);                 // Right
+    // Darken/tint areas outside the world
+    const tb = window.getBgTheme ? window.getBgTheme() : { outside: 'rgba(5,7,12,0.7)' };
+    ctx.fillStyle = tb.outside;
+    ctx.fillRect(0, 0, W, Math.max(0, y));                // Top
+    ctx.fillRect(0, y + h, W, H - y - h);                 // Bottom
+    ctx.fillRect(0, y, Math.max(0, x), h);                // Left
+    ctx.fillRect(x + w, y, W - x - w, h);                 // Right
 }
 
 /**
@@ -85,19 +85,19 @@ export function drawWorldBorder(ctx, cam, W, H) {
  * @param {number} H
  */
 export function drawFood(ctx, food, cam, W, H) {
-  for (const f of food) {
-    const sx = (f.x - cam.x) * cam.zoom + W / 2;
-    const sy = (f.y - cam.y) * cam.zoom + H / 2;
-    const sr = (f.ejected ? f.radius : f.radius * 0.6) * cam.zoom;
+    for (const f of food) {
+        const sx = (f.x - cam.x) * cam.zoom + W / 2;
+        const sy = (f.y - cam.y) * cam.zoom + H / 2;
+        const sr = (f.ejected ? f.radius : f.radius * 0.6) * cam.zoom;
 
-    // Frustum culling
-    if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+        // Frustum culling
+        if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
 
-    ctx.beginPath();
-    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-    ctx.fillStyle = f.color + 'cc';
-    ctx.fill();
-  }
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fillStyle = f.color + 'cc';
+        ctx.fill();
+    }
 }
 
 /**
@@ -109,29 +109,29 @@ export function drawFood(ctx, food, cam, W, H) {
  * @param {number} H
  */
 export function drawViruses(ctx, viruses, cam, W, H) {
-  for (const v of viruses) {
-    const sx = (v.x - cam.x) * cam.zoom + W / 2;
-    const sy = (v.y - cam.y) * cam.zoom + H / 2;
-    const sr = v.radius * cam.zoom;
+    for (const v of viruses) {
+        const sx = (v.x - cam.x) * cam.zoom + W / 2;
+        const sy = (v.y - cam.y) * cam.zoom + H / 2;
+        const sr = v.radius * cam.zoom;
 
-    if (sx + sr < -50 || sx - sr > W + 50 || sy + sr < -50 || sy - sr > H + 50) continue;
+        if (sx + sr < -50 || sx - sr > W + 50 || sy + sr < -50 || sy - sr > H + 50) continue;
 
-    // Draw spiky polygon
-    ctx.beginPath();
-    for (let i = 0; i < v.spikes * 2; i++) {
-      const angle = (i * Math.PI) / v.spikes;
-      const r = i % 2 === 0 ? sr * 1.15 : sr * 0.85;
-      const px = sx + Math.cos(angle) * r;
-      const py = sy + Math.sin(angle) * r;
-      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        // Draw spiky polygon
+        ctx.beginPath();
+        for (let i = 0; i < v.spikes * 2; i++) {
+            const angle = (i * Math.PI) / v.spikes;
+            const r = i % 2 === 0 ? sr * 1.15 : sr * 0.85;
+            const px = sx + Math.cos(angle) * r;
+            const py = sy + Math.sin(angle) * r;
+            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(90, 255, 138, 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(90, 255, 138, 0.5)';
+        ctx.lineWidth = 2 * cam.zoom;
+        ctx.stroke();
     }
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(90, 255, 138, 0.15)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(90, 255, 138, 0.5)';
-    ctx.lineWidth = 2 * cam.zoom;
-    ctx.stroke();
-  }
 }
 
 /**
@@ -143,17 +143,17 @@ export function drawViruses(ctx, viruses, cam, W, H) {
  * @param {number} H
  */
 export function drawParticles(ctx, particles, cam, W, H) {
-  for (const p of particles) {
-    const sx = (p.x - cam.x) * cam.zoom + W / 2;
-    const sy = (p.y - cam.y) * cam.zoom + H / 2;
-    const sr = p.radius * p.life * cam.zoom;
+    for (const p of particles) {
+        const sx = (p.x - cam.x) * cam.zoom + W / 2;
+        const sy = (p.y - cam.y) * cam.zoom + H / 2;
+        const sr = p.radius * p.life * cam.zoom;
 
-    ctx.beginPath();
-    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-    const alpha = Math.floor(p.life * 200).toString(16).padStart(2, '0');
-    ctx.fillStyle = p.color + alpha;
-    ctx.fill();
-  }
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        const alpha = Math.floor(p.life * 200).toString(16).padStart(2, '0');
+        ctx.fillStyle = p.color + alpha;
+        ctx.fill();
+    }
 }
 
 /**
@@ -167,42 +167,42 @@ export function drawParticles(ctx, particles, cam, W, H) {
  * @param {number} H - Main canvas height
  */
 export function drawMinimap(mmCtx, player, bots, food, cam, W, H) {
-  mmCtx.fillStyle = 'rgba(10, 14, 23, 0.9)';
-  mmCtx.fillRect(0, 0, 160, 160);
+    mmCtx.fillStyle = 'rgba(240, 240, 240, 0.95)';
+    mmCtx.fillRect(0, 0, 160, 160);
 
-  const scale = 160 / WORLD_SIZE;
+    const scale = 160 / WORLD_SIZE;
 
-  // Food (dim dots)
-  mmCtx.fillStyle = 'rgba(0, 240, 255, 0.15)';
-  for (const f of food) {
-    mmCtx.fillRect(f.x * scale, f.y * scale, 1, 1);
-  }
+    // Food (dim dots)
+    mmCtx.fillStyle = 'rgba(160, 160, 160, 0.4)';
+    for (const f of food) {
+        mmCtx.fillRect(f.x * scale, f.y * scale, 1, 1);
+    }
 
-  // Bots
-  for (const b of bots) {
-    if (!b.alive) continue;
-    mmCtx.fillStyle = b.color + '80';
-    const r = Math.max(2, massToRadius(b.totalMass) * scale);
-    mmCtx.beginPath();
-    mmCtx.arc(b.x * scale, b.y * scale, r, 0, Math.PI * 2);
-    mmCtx.fill();
-  }
+    // Bots
+    for (const b of bots) {
+        if (!b.alive) continue;
+        mmCtx.fillStyle = b.color + '80';
+        const r = Math.max(2, massToRadius(b.totalMass) * scale);
+        mmCtx.beginPath();
+        mmCtx.arc(b.x * scale, b.y * scale, r, 0, Math.PI * 2);
+        mmCtx.fill();
+    }
 
-  // Player
-  if (player && player.alive) {
-    mmCtx.fillStyle = '#00f0ff';
-    const r = Math.max(3, massToRadius(player.totalMass) * scale);
-    mmCtx.beginPath();
-    mmCtx.arc(player.centerX * scale, player.centerY * scale, r, 0, Math.PI * 2);
-    mmCtx.fill();
-  }
+    // Player
+    if (player && player.alive) {
+        mmCtx.fillStyle = '#00f0ff';
+        const r = Math.max(3, massToRadius(player.totalMass) * scale);
+        mmCtx.beginPath();
+        mmCtx.arc(player.centerX * scale, player.centerY * scale, r, 0, Math.PI * 2);
+        mmCtx.fill();
+    }
 
-  // Camera viewport rectangle
-  mmCtx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
-  mmCtx.lineWidth = 1;
-  const vx = (cam.x - W / 2 / cam.zoom) * scale;
-  const vy = (cam.y - H / 2 / cam.zoom) * scale;
-  const vw = (W / cam.zoom) * scale;
-  const vh = (H / cam.zoom) * scale;
-  mmCtx.strokeRect(vx, vy, vw, vh);
+    // Camera viewport rectangle
+    mmCtx.strokeStyle = 'rgba(80, 80, 80, 0.5)';
+    mmCtx.lineWidth = 1;
+    const vx = (cam.x - W / 2 / cam.zoom) * scale;
+    const vy = (cam.y - H / 2 / cam.zoom) * scale;
+    const vw = (W / cam.zoom) * scale;
+    const vh = (H / cam.zoom) * scale;
+    mmCtx.strokeRect(vx, vy, vw, vh);
 }
