@@ -12,24 +12,24 @@ export const START_MASS = 20;
 export const MIN_SPLIT_MASS = 40;
 export const MERGE_TIME = 15000;  // ms before split cells can merge
 export const DECAY_RATE = 0.9998; // mass decay per frame for large cells
-export const BASE_SPEED = 4;
+export const BASE_SPEED = 5.5;
 export const MAX_CELLS = 8;       // max split pieces per entity
 
 // ── CELL COLORS ──
 export const CELL_COLORS = [
-  '#ff2d75', '#00f0ff', '#7b2dff', '#ffa726', '#5aff8a',
-  '#ff6b6b', '#48dbfb', '#ffd32a', '#ff9ff3', '#54a0ff',
-  '#00d2d3', '#ff6348', '#2ed573', '#eccc68', '#a29bfe',
-  '#fd79a8', '#6c5ce7', '#00cec9', '#fab1a0', '#e17055'
+    '#ff2d75', '#00f0ff', '#7b2dff', '#ffa726', '#5aff8a',
+    '#ff6b6b', '#48dbfb', '#ffd32a', '#ff9ff3', '#54a0ff',
+    '#00d2d3', '#ff6348', '#2ed573', '#eccc68', '#a29bfe',
+    '#fd79a8', '#6c5ce7', '#00cec9', '#fab1a0', '#e17055'
 ];
 
 // ── BOT NAMES ──
 export const BOT_NAMES = [
-  'Blob', 'Nom', 'Devour', 'Gobble', 'Munch', 'Chomp',
-  'Gulp', 'Nibble', 'Snack', 'Feast', 'Gloop', 'Ooze',
-  'Splat', 'Jelly', 'Plop', 'Slurp', 'Bloop', 'Fizz',
-  'Morph', 'Flux', 'Drift', 'Nova', 'Pixel', 'Byte',
-  'Void', 'Echo', 'Glitch', 'Neon', 'Pulse', 'Surge'
+    'Blob', 'Nom', 'Devour', 'Gobble', 'Munch', 'Chomp',
+    'Gulp', 'Nibble', 'Snack', 'Feast', 'Gloop', 'Ooze',
+    'Splat', 'Jelly', 'Plop', 'Slurp', 'Bloop', 'Fizz',
+    'Morph', 'Flux', 'Drift', 'Nova', 'Pixel', 'Byte',
+    'Void', 'Echo', 'Glitch', 'Neon', 'Pulse', 'Surge'
 ];
 
 // ── MATH UTILITIES ──
@@ -41,7 +41,7 @@ export const BOT_NAMES = [
  * @returns {number}
  */
 export function dist(a, b) {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
 /**
@@ -50,7 +50,7 @@ export function dist(a, b) {
  * @returns {number}
  */
 export function massToRadius(mass) {
-  return Math.sqrt(mass) * 4;
+    return Math.sqrt(mass) * 4;
 }
 
 /**
@@ -61,7 +61,7 @@ export function massToRadius(mass) {
  * @returns {number}
  */
 export function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
+    return Math.max(min, Math.min(max, v));
 }
 
 /**
@@ -72,7 +72,7 @@ export function clamp(v, min, max) {
  * @returns {number}
  */
 export function lerp(a, b, t) {
-  return a + (b - a) * t;
+    return a + (b - a) * t;
 }
 
 /**
@@ -80,7 +80,7 @@ export function lerp(a, b, t) {
  * @returns {string}
  */
 export function randomColor() {
-  return CELL_COLORS[Math.floor(Math.random() * CELL_COLORS.length)];
+    return CELL_COLORS[Math.floor(Math.random() * CELL_COLORS.length)];
 }
 
 /**
@@ -88,7 +88,7 @@ export function randomColor() {
  * @returns {string}
  */
 export function randomName() {
-  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+    return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
 }
 
 /**
@@ -98,5 +98,5 @@ export function randomName() {
  * @returns {number}
  */
 export function randomRange(min, max) {
-  return min + Math.random() * (max - min);
+    return min + Math.random() * (max - min);
 }

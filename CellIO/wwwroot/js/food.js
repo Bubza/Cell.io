@@ -26,12 +26,27 @@ export function createFood() {
  * @returns {Object}
  */
 export function createFoodItem() {
+    const roll = Math.random();
+    let mass, radius;
+    if (roll < 0.05) {
+        // Large chunk (~5%)
+        mass = 8 + Math.random() * 6;
+        radius = 8 + Math.random() * 4;
+    } else if (roll < 0.25) {
+        // Medium pellet (~20%)
+        mass = 3 + Math.random() * 3;
+        radius = 6 + Math.random() * 3;
+    } else {
+        // Small pellet (~75%)
+        mass = FOOD_MASS;
+        radius = 5 + Math.random() * 3;
+    }
     return {
         x: Math.random() * WORLD_SIZE,
         y: Math.random() * WORLD_SIZE,
-        mass: FOOD_MASS,
+        mass,
         color: randomColor(),
-        radius: 5 + Math.random() * 3,
+        radius,
         ejected: false
     };
 }
