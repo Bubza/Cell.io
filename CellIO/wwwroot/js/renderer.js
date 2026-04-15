@@ -7,6 +7,11 @@
 
 import { massToRadius, WORLD_SIZE } from './utils.js';
 
+// ── Petri dish background image ──
+const petriImg = new Image();
+petriImg.src = '/assetss/petri.jpg';
+petriImg.onerror = () => console.warn('petri.jpg not found at /assetss/petri.jpg');
+
 /**
  * Clear the canvas and fill with background color.
  * @param {CanvasRenderingContext2D} ctx
@@ -15,15 +20,16 @@ import { massToRadius, WORLD_SIZE } from './utils.js';
  */
 export function clearCanvas(ctx, W, H) {
     if (window.bgTheme === 'petri') {
-        // Agar base fills entire canvas — world border darkens outside later
-        const cx = W / 2, cy = H / 2;
-        const r = Math.max(W, H) * 0.8;
-        const agarGrad = ctx.createRadialGradient(cx - r * 0.15, cy - r * 0.15, 0, cx, cy, r);
-        agarGrad.addColorStop(0, '#d6c97a');
-        agarGrad.addColorStop(0.5, '#c4b86a');
-        agarGrad.addColorStop(1, '#a09040');
-        ctx.fillStyle = agarGrad;
+        ctx.fillStyle = '#1c1c1c';
         ctx.fillRect(0, 0, W, H);
+        try {
+            if (petriImg.naturalWidth > 0) {
+                const scale = Math.max(W / petriImg.naturalWidth, H / petriImg.naturalHeight) * 1.4;
+                const dw = petriImg.naturalWidth * scale;
+                const dh = petriImg.naturalHeight * scale;
+                ctx.drawImage(petriImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+            }
+        } catch (e) { }
     } else {
         const t = window.getBgTheme ? window.getBgTheme() : { bg: '#0a0e17' };
         ctx.fillStyle = t.bg;
@@ -37,45 +43,8 @@ export function drawGrid(ctx, cam, W, H) {
     const isPetri = (window.bgTheme === 'petri');
 
     if (isPetri) {
-        // Subtle agar texture blobs (deterministic per grid cell)
-        const endX = cam.x + W / 2 / cam.zoom + 120;
-        const endY = cam.y + H / 2 / cam.zoom + 120;
-        const startX = Math.floor((cam.x - W / 2 / cam.zoom) / 120) * 120;
-        const startY = Math.floor((cam.y - H / 2 / cam.zoom) / 120) * 120;
-        const blobSize = 120 * cam.zoom;
-        for (let wx = startX; wx <= endX; wx += 120) {
-            for (let wy = startY; wy <= endY; wy += 120) {
-                const seed = Math.sin(wx * 0.017 + wy * 0.031) * 0.5 + 0.5;
-                const seed2 = Math.cos(wx * 0.023 - wy * 0.011) * 0.5 + 0.5;
-                const bx = (wx - cam.x) * cam.zoom + W / 2 + (seed - 0.5) * blobSize * 0.4;
-                const by = (wy - cam.y) * cam.zoom + H / 2 + (seed2 - 0.5) * blobSize * 0.4;
-                const br = blobSize * (0.3 + seed * 0.45);
-                const alpha = 0.03 + seed * 0.05;
-                const grad = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-                grad.addColorStop(0, `rgba(255,245,180,${alpha})`);
-                grad.addColorStop(1, 'rgba(255,245,180,0)');
-                ctx.beginPath();
-                ctx.arc(bx, by, br, 0, Math.PI * 2);
-                ctx.fillStyle = grad;
-                ctx.fill();
-            }
-        }
-
-        // Fine counting grid scratched into agar
-        const gridSize = 80;
-        const gStartX = Math.floor((cam.x - W / 2 / cam.zoom) / gridSize) * gridSize;
-        const gStartY = Math.floor((cam.y - H / 2 / cam.zoom) / gridSize) * gridSize;
-        ctx.strokeStyle = 'rgba(100, 85, 20, 0.13)';
-        ctx.lineWidth = 0.7;
-        for (let gx = gStartX; gx <= endX; gx += gridSize) {
-            const sx = (gx - cam.x) * cam.zoom + W / 2;
-            ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
-        }
-        for (let gy = gStartY; gy <= endY; gy += gridSize) {
-            const sy = (gy - cam.y) * cam.zoom + H / 2;
-            ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
-        }
-        return;
+        return; // just the photo, nothing on top
+    } else if (isMicroscope) {
 
     } else if (isMicroscope) {
         // ── Microscope slide: warm beige base + faint grid lines + lens vignette ──
@@ -142,39 +111,10 @@ export function drawWorldBorder(ctx, cam, W, H) {
     const h = WORLD_SIZE * z;
 
     if (window.bgTheme === 'petri') {
-        // ── Dark area outside the square world ──
-        const tb = window.getBgTheme ? window.getBgTheme() : { outside: 'rgba(5,7,12,0.7)' };
-        ctx.fillStyle = 'rgba(30, 25, 10, 0.78)';
-        ctx.fillRect(0, 0, W, Math.max(0, y));
-        ctx.fillRect(0, y + h, W, H - y - h);
-        ctx.fillRect(0, y, Math.max(0, x), h);
-        ctx.fillRect(x + w, y, W - x - w, h);
-
-        // World square border (agar edge)
-        ctx.strokeStyle = 'rgba(120, 100, 40, 0.7)';
-        ctx.lineWidth = 3 * z;
+        // Just a faint border at the world edge, no dark overlay
+        ctx.strokeStyle = 'rgba(100, 80, 50, 0.4)';
+        ctx.lineWidth = 2 * z;
         ctx.strokeRect(x, y, w, h);
-
-        // ── Screen-space circular vignette ──
-        // Makes it look like you're peering through a round petri dish wall
-        const cx = W / 2, cy = H / 2;
-        const innerR = Math.min(W, H) * 0.42;
-        const outerR = Math.max(W, H) * 0.78;
-        const vignette = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-        vignette.addColorStop(0, 'rgba(0,0,0,0)');
-        vignette.addColorStop(0.5, 'rgba(10,8,2,0.18)');
-        vignette.addColorStop(0.8, 'rgba(20,15,3,0.55)');
-        vignette.addColorStop(1, 'rgba(30,20,5,0.82)');
-        ctx.fillStyle = vignette;
-        ctx.fillRect(0, 0, W, H);
-
-        // Rim highlight arc (specular on glass wall, top-left)
-        ctx.beginPath();
-        ctx.arc(cx - W * 0.02, cy - H * 0.02, Math.min(W, H) * 0.47, -Math.PI * 0.75, -Math.PI * 0.2);
-        ctx.strokeStyle = 'rgba(255, 245, 200, 0.18)';
-        ctx.lineWidth = 18;
-        ctx.stroke();
-
         return;
     }
 
