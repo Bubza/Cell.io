@@ -362,7 +362,7 @@ window.startGame = function () {
     const nameInput = document.getElementById('player-name').value.trim() || 'Player';
 
     // Create player at world center
-    player = new Player(WORLD_SIZE / 2, WORLD_SIZE / 2, nameInput);
+    player = new Player(WORLD_SIZE / 2, WORLD_SIZE / 2, nameInput, window.selectedCellColor || '#00f0ff');
 
     // Spawn world entities
     food = createFood();
@@ -431,7 +431,7 @@ window.restartGame = function () {
 /** Resume from pause */
 window.resumeGame = function () {
     gamePaused = false;
-    document.getElementById('screen-pause').classList.remove('hidden');
+    document.getElementById('screen-pause').classList.add('hidden');
     unmuteDrone();
 };
 

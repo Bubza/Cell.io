@@ -39,7 +39,7 @@
         </div>
 
         <div class="hud-fsm-debug" id="fsm-debug">
-            <h4>Bot AI States</h4>
+            <h4 onclick="toggleFsmPanel()" style="cursor:pointer; user-select:none;">BOT AI STATES <span id="fsm-toggle">−</span></h4>
             <div id="fsm-debug-list"></div>
         </div>
     </div>
@@ -61,6 +61,20 @@
                maxlength="16"
                autocomplete="off" />
         <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
+
+        <div class="color-picker">
+            <div class="bg-picker-label">CELL COLOR</div>
+            <div class="color-swatches">
+                <div class="color-swatch active" data-color="#00f0ff" style="background:#00f0ff"></div>
+                <div class="color-swatch" data-color="#ff2d75" style="background:#ff2d75"></div>
+                <div class="color-swatch" data-color="#7b2dff" style="background:#7b2dff"></div>
+                <div class="color-swatch" data-color="#5aff8a" style="background:#5aff8a"></div>
+                <div class="color-swatch" data-color="#ffa726" style="background:#ffa726"></div>
+                <div class="color-swatch" data-color="#ffd32a" style="background:#ffd32a"></div>
+                <div class="color-swatch" data-color="#ff6b6b" style="background:#ff6b6b"></div>
+                <div class="color-swatch" data-color="#a29bfe" style="background:#a29bfe"></div>
+            </div>
+        </div>
 
         <div class="bg-picker">
             <div class="bg-picker-label">CULTURE MEDIUM</div>
@@ -113,18 +127,34 @@
             forest: 'background: radial-gradient(circle, #0d3318, #071a0d); box-shadow: 0 0 0 2px rgba(90,255,138,0.7)',
         };
 
+        window.selectedCellColor = '#00f0ff';
+
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.bg-swatch').forEach(s => {
                 const theme = s.dataset.theme;
                 s.style.cssText = SWATCH_STYLES[theme] || '';
-
                 s.addEventListener('click', () => {
                     document.querySelectorAll('.bg-swatch').forEach(x => x.classList.remove('active'));
                     s.classList.add('active');
                     window.bgTheme = theme;
                 });
             });
+
+            document.querySelectorAll('.color-swatch').forEach(s => {
+                s.addEventListener('click', () => {
+                    document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('active'));
+                    s.classList.add('active');
+                    window.selectedCellColor = s.dataset.color;
+                });
+            });
         });
+        window.toggleFsmPanel = function () {
+            const list = document.getElementById('fsm-debug-list');
+            const icon = document.getElementById('fsm-toggle');
+            const collapsed = list.style.display === 'none';
+            list.style.display = collapsed ? '' : 'none';
+            icon.textContent = collapsed ? '−' : '+';
+        };
     </script>
 
     <!-- Load game via ES6 modules -->

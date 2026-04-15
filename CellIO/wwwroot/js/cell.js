@@ -1,9 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════
 // cell.js — Base Cell Class
-// 
-// Represents a single game entity (player or bot).
-// Supports multi-cell mode (splitting into multiple pieces).
-// Handles movement, merging, mass decay, and rendering.
+// Bacteria-style rendering: rod/capsule shape, flagella, cell wall,
+// internal granules, slime trail.
 // ═══════════════════════════════════════════════════════════════════
 
 import {
@@ -13,14 +11,6 @@ import {
 import { playSound } from './audio.js';
 
 export class Cell {
-    /**
-     * @param {number} x - Starting X position
-     * @param {number} y - Starting Y position
-     * @param {number} mass - Starting mass
-     * @param {string} color - Hex color string
-     * @param {string} name - Display name
-     * @param {boolean} isPlayer - Whether this is the human player
-     */
     constructor(x, y, mass, color, name, isPlayer = false) {
         this.x = x;
         this.y = y;
@@ -29,192 +19,85 @@ export class Cell {
         this.name = name;
         this.isPlayer = isPlayer;
         this.alive = true;
-
-        // Multi-cell array: each sub-cell has its own position and mass
-        this.cells = [{ x, y, mass, vx: 0, vy: 0, splitTime: 0, wobbleSeed: Math.random() * Math.PI * 2, wobblePhase: Math.random() * Math.PI * 2, trail: [] }];
+        this.cells = [{ x, y, mass, vx: 0, vy: 0, splitTime: 0, wobbleSeed: Math.random() * Math.PI * 2, wobblePhase: Math.random() * Math.PI * 2, trail: [], angle: Math.random() * Math.PI * 2 }];
     }
 
-    /** Total mass across all sub-cells */
-    get totalMass() {
-        return this.cells.reduce((sum, c) => sum + c.mass, 0);
-    }
+    get totalMass() { return this.cells.reduce((sum, c) => sum + c.mass, 0); }
+    get radius() { return massToRadius(this.totalMass); }
+    get centerX() { if (!this.cells.length) return this.x; let s = 0; for (const c of this.cells) s += c.x; return s / this.cells.length; }
+    get centerY() { if (!this.cells.length) return this.y; let s = 0; for (const c of this.cells) s += c.y; return s / this.cells.length; }
 
-    /** Radius based on total mass */
-    get radius() {
-        return massToRadius(this.totalMass);
-    }
-
-    /** Center X (average of all sub-cells) */
-    get centerX() {
-        if (this.cells.length === 0) return this.x;
-        let sx = 0;
-        for (const c of this.cells) sx += c.x;
-        return sx / this.cells.length;
-    }
-
-    /** Center Y (average of all sub-cells) */
-    get centerY() {
-        if (this.cells.length === 0) return this.y;
-        let sy = 0;
-        for (const c of this.cells) sy += c.y;
-        return sy / this.cells.length;
-    }
-
-    /**
-     * Move all sub-cells toward a target point.
-     * Also handles merging sub-cells back together after MERGE_TIME.
-     * @param {number} tx - Target X
-     * @param {number} ty - Target Y
-     * @param {number} dt - Delta time
-     */
     moveToward(tx, ty, dt) {
         for (const c of this.cells) {
-            const dx = tx - c.x;
-            const dy = ty - c.y;
+            const dx = tx - c.x, dy = ty - c.y;
             const d = Math.sqrt(dx * dx + dy * dy);
             if (d < 1) continue;
-
-            // Speed is inversely related to mass (bigger = slower)
             const spd = BASE_SPEED * Math.pow(c.mass, -0.08);
-            c.x += (dx / d) * spd;
-            c.y += (dy / d) * spd;
-
-            // Clamp to world bounds
-            c.x = clamp(c.x, 0, WORLD_SIZE);
-            c.y = clamp(c.y, 0, WORLD_SIZE);
+            c.x += (dx / d) * spd; c.y += (dy / d) * spd;
+            c.x = clamp(c.x, 0, WORLD_SIZE); c.y = clamp(c.y, 0, WORLD_SIZE);
+            // Track movement angle for bacteria orientation
+            c.angle = Math.atan2(dy, dx);
         }
-
-        // Update entity center position
-        this.x = this.centerX;
-        this.y = this.centerY;
-
-        // Attempt to merge sub-cells that are close enough and old enough
+        this.x = this.centerX; this.y = this.centerY;
         this._tryMergeCells();
     }
 
-    /**
-     * Merge sub-cells that have existed for longer than MERGE_TIME
-     * and are overlapping.
-     */
     _tryMergeCells() {
         if (this.cells.length <= 1) return;
-
         const now = Date.now();
         for (let i = 0; i < this.cells.length; i++) {
             for (let j = i + 1; j < this.cells.length; j++) {
-                const a = this.cells[i];
-                const b = this.cells[j];
-
-                // Both cells must be old enough to merge
+                const a = this.cells[i], b = this.cells[j];
                 if (now - a.splitTime < MERGE_TIME || now - b.splitTime < MERGE_TIME) continue;
-
                 const d = dist(a, b);
-                const rA = massToRadius(a.mass);
-                const rB = massToRadius(b.mass);
-
-                if (d < rA + rB) {
-                    // Absorb b into a
-                    const totalMass = a.mass + b.mass;
-                    a.x = (a.x * a.mass + b.x * b.mass) / totalMass;
-                    a.y = (a.y * a.mass + b.y * b.mass) / totalMass;
-                    a.mass = totalMass;
-                    this.cells.splice(j, 1);
-                    j--;
+                if (d < massToRadius(a.mass) + massToRadius(b.mass)) {
+                    const total = a.mass + b.mass;
+                    a.x = (a.x * a.mass + b.x * b.mass) / total; a.y = (a.y * a.mass + b.y * b.mass) / total;
+                    a.mass = total; this.cells.splice(j, 1); j--;
                 }
             }
         }
     }
 
-    /**
-     * Split cell toward a target. Each eligible sub-cell splits in half.
-     * @param {number} tx - Target X
-     * @param {number} ty - Target Y
-     */
     split(tx, ty) {
         if (this.cells.length >= MAX_CELLS) return;
-
         const newCells = [];
         for (const c of this.cells) {
             if (c.mass < MIN_SPLIT_MASS) continue;
             if (this.cells.length + newCells.length >= MAX_CELLS) break;
-
-            const half = c.mass / 2;
-            c.mass = half;
-
-            const dx = tx - c.x;
-            const dy = ty - c.y;
+            const half = c.mass / 2; c.mass = half;
+            const dx = tx - c.x, dy = ty - c.y;
             const d = Math.sqrt(dx * dx + dy * dy) || 1;
             const pushDist = massToRadius(half) * 3;
-
-            const nc = {
+            newCells.push({
                 x: clamp(c.x + (dx / d) * pushDist, 0, WORLD_SIZE),
                 y: clamp(c.y + (dy / d) * pushDist, 0, WORLD_SIZE),
-                mass: half,
-                vx: (dx / d) * 10,
-                vy: (dy / d) * 10,
+                mass: half, vx: (dx / d) * 10, vy: (dy / d) * 10,
                 splitTime: Date.now(),
-                wobbleSeed: Math.random() * Math.PI * 2,
-                wobblePhase: Math.random() * Math.PI * 2,
-                trail: []
-            };
-
+                wobbleSeed: Math.random() * Math.PI * 2, wobblePhase: Math.random() * Math.PI * 2,
+                trail: [], angle: Math.atan2(dy, dx)
+            });
             c.splitTime = Date.now();
-            newCells.push(nc);
         }
-
-        if (newCells.length > 0) {
-            this.cells.push(...newCells);
-            playSound('split');
-        }
+        if (newCells.length > 0) { this.cells.push(...newCells); playSound('split'); }
     }
 
-    /**
-     * Eject a blob of mass in a direction.
-     * @param {number} tx - Target X
-     * @param {number} ty - Target Y
-     * @returns {Object|null} Ejected food object, or null
-     */
     ejectMass(tx, ty) {
         for (const c of this.cells) {
             if (c.mass < 30) continue;
-
             c.mass -= 12;
-            const dx = tx - c.x;
-            const dy = ty - c.y;
+            const dx = tx - c.x, dy = ty - c.y;
             const d = Math.sqrt(dx * dx + dy * dy) || 1;
-
             playSound('eject');
-
-            return {
-                x: c.x + (dx / d) * (massToRadius(c.mass) + 10),
-                y: c.y + (dy / d) * (massToRadius(c.mass) + 10),
-                mass: 12,
-                color: this.color,
-                radius: massToRadius(12),
-                ejected: true
-            };
+            return { x: c.x + (dx / d) * (massToRadius(c.mass) + 10), y: c.y + (dy / d) * (massToRadius(c.mass) + 10), mass: 12, color: this.color, radius: massToRadius(12), ejected: true };
         }
         return null;
     }
 
-    /**
-     * Apply mass decay — large cells slowly lose mass over time.
-     */
     decay() {
-        for (const c of this.cells) {
-            if (c.mass > START_MASS) {
-                c.mass *= DECAY_RATE;
-            }
-        }
+        for (const c of this.cells) { if (c.mass > START_MASS) c.mass *= DECAY_RATE; }
     }
 
-    /**
-     * Draw this cell (all sub-cells) on the canvas.
-     * @param {CanvasRenderingContext2D} ctx
-     * @param {Object} cam - Camera { x, y, zoom }
-     * @param {number} W - Canvas width
-     * @param {number} H - Canvas height
-     */
     draw(ctx, cam, W, H) {
         const now = Date.now() / 1000;
 
@@ -223,128 +106,140 @@ export class Cell {
             const sy = (c.y - cam.y) * cam.zoom + H / 2;
             const baseR = massToRadius(c.mass) * cam.zoom;
 
-            // Frustum culling
-            if (sx + baseR < -50 || sx - baseR > W + 50 || sy + baseR < -50 || sy - baseR > H + 50) continue;
+            if (sx + baseR < -80 || sx - baseR > W + 80 || sy + baseR < -80 || sy - baseR > H + 80) continue;
 
             const seed = c.wobbleSeed || 0;
-            const phase = c.wobblePhase || 0;
+            const angle = c.angle || 0;
 
             // ── Slime trail ──
             if (!c.trail) c.trail = [];
-            // Record position every frame; cap trail length
-            const TRAIL_MAX = 18;
             c.trail.push({ x: sx, y: sy, r: baseR });
-            if (c.trail.length > TRAIL_MAX) c.trail.shift();
-
-            // Draw trail blobs from oldest (faintest) to newest (slightly visible)
+            if (c.trail.length > 18) c.trail.shift();
             for (let t = 0; t < c.trail.length; t++) {
                 const tp = c.trail[t];
-                const progress = t / c.trail.length;           // 0 = oldest, 1 = newest
-                const alpha = progress * 0.22;                  // max 22% opacity
-                const tr = tp.r * (0.35 + progress * 0.45);    // grows as it approaches cell
+                const progress = t / c.trail.length;
+                const alpha = progress * 0.18;
+                const tr = tp.r * (0.25 + progress * 0.4);
                 ctx.beginPath();
                 ctx.arc(tp.x, tp.y, tr, 0, Math.PI * 2);
-                const hexAlpha = Math.floor(alpha * 255).toString(16).padStart(2, '0');
-                ctx.fillStyle = this.color + hexAlpha;
+                ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
                 ctx.fill();
             }
 
-            // ── Pulse: gentle breathe in/out ──
-            const pulse = 1 + 0.025 * Math.sin(now * 1.8 + seed);
+            // ── Bacteria shape: elongated capsule with wobble ──
+            const pulse = 1 + 0.018 * Math.sin(now * 1.6 + seed);
             const sr = baseR * pulse;
+            // Elongation: bacteria are ~1.6x longer than wide
+            const elongation = 1.55;
+            const wobbleAmp = sr * 0.055;
 
-            // ── Wobbly amoeba path ──
-            // 7 harmonics of sine noise along the perimeter
-            const POINTS = 64;
-            const wobbleAmp = sr * 0.09; // how far the edge can deviate
-            function wobbleR(angle) {
-                return sr
-                    + wobbleAmp * Math.sin(3 * angle + now * 1.1 + seed)
-                    + wobbleAmp * 0.6 * Math.sin(5 * angle - now * 0.7 + phase)
-                    + wobbleAmp * 0.3 * Math.sin(7 * angle + now * 0.5 + seed * 2);
-            }
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(angle);
 
-            // ── Outer glow ──
-            const grad = ctx.createRadialGradient(sx, sy, sr * 0.5, sx, sy, sr * 1.4);
-            grad.addColorStop(0, this.color + '30');
-            grad.addColorStop(1, this.color + '00');
+            // Outer glow
+            const glow = ctx.createRadialGradient(0, 0, sr * 0.3, 0, 0, sr * 1.5);
+            glow.addColorStop(0, this.color + '28');
+            glow.addColorStop(1, this.color + '00');
             ctx.beginPath();
-            ctx.arc(sx, sy, sr * 1.4, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
+            ctx.ellipse(0, 0, sr * elongation * 1.4, sr * 1.4, 0, 0, Math.PI * 2);
+            ctx.fillStyle = glow;
             ctx.fill();
 
-            // ── Main amoeba body ──
-            ctx.beginPath();
-            for (let i = 0; i <= POINTS; i++) {
-                const angle = (i / POINTS) * Math.PI * 2;
-                const r = wobbleR(angle);
-                const px = sx + Math.cos(angle) * r;
-                const py = sy + Math.sin(angle) * r;
-                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            // ── Flagella (whip-like tail) ──
+            if (sr > 6) {
+                const flagCount = Math.min(3, 1 + Math.floor(sr / 20));
+                for (let f = 0; f < flagCount; f++) {
+                    const fOffset = (f - (flagCount - 1) / 2) * sr * 0.35;
+                    const fLen = sr * (2.2 + f * 0.3);
+                    const waveAmp = sr * 0.4;
+                    const waveFreq = 3.5;
+                    const waveSpeed = now * 4 + f * 1.2;
+                    ctx.beginPath();
+                    const steps = 24;
+                    for (let i = 0; i <= steps; i++) {
+                        const t2 = i / steps;
+                        const fx = -(sr * elongation * 0.9) - t2 * fLen;
+                        const fy = fOffset + Math.sin(t2 * waveFreq * Math.PI + waveSpeed) * waveAmp * t2;
+                        i === 0 ? ctx.moveTo(fx, fy) : ctx.lineTo(fx, fy);
+                    }
+                    ctx.strokeStyle = this.color + '55';
+                    ctx.lineWidth = Math.max(0.8, sr * 0.045);
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
             }
-            ctx.closePath();
-            ctx.fillStyle = this.color + 'cc';
+
+            // ── Cell wall (outer capsule) ──
+            const POINTS = 48;
+            function bacteriaPath(scale, wAmp) {
+                ctx.beginPath();
+                for (let i = 0; i <= POINTS; i++) {
+                    const a = (i / POINTS) * Math.PI * 2;
+                    const wobble = wAmp * Math.sin(4 * a + now * 1.2 + seed) + wAmp * 0.5 * Math.sin(7 * a - now * 0.8 + seed);
+                    const rx = sr * elongation * scale + wobble;
+                    const ry = sr * scale + wobble * 0.5;
+                    const px = Math.cos(a) * rx;
+                    const py = Math.sin(a) * ry;
+                    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+            }
+
+            // Body fill
+            bacteriaPath(1.0, wobbleAmp);
+            ctx.fillStyle = this.color + 'bb';
             ctx.fill();
 
-            // ── Membrane: inner ring ──
-            ctx.beginPath();
-            for (let i = 0; i <= POINTS; i++) {
-                const angle = (i / POINTS) * Math.PI * 2;
-                const r = wobbleR(angle) * 0.88;
-                const px = sx + Math.cos(angle) * r;
-                const py = sy + Math.sin(angle) * r;
-                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-            }
-            ctx.closePath();
-            ctx.strokeStyle = this.color + '55';
-            ctx.lineWidth = Math.max(1, sr * 0.06);
+            // Inner membrane (slightly darker, inset)
+            bacteriaPath(0.84, wobbleAmp * 0.6);
+            ctx.strokeStyle = this.color + '66';
+            ctx.lineWidth = Math.max(1, sr * 0.07);
             ctx.stroke();
 
-            // ── Outer border (follows wobble) ──
-            ctx.beginPath();
-            for (let i = 0; i <= POINTS; i++) {
-                const angle = (i / POINTS) * Math.PI * 2;
-                const r = wobbleR(angle);
-                const px = sx + Math.cos(angle) * r;
-                const py = sy + Math.sin(angle) * r;
-                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-            }
-            ctx.closePath();
+            // Outer cell wall
+            bacteriaPath(1.0, wobbleAmp);
             ctx.strokeStyle = this.color;
-            ctx.lineWidth = Math.max(1, 2 * cam.zoom);
+            ctx.lineWidth = Math.max(1, sr * 0.055);
             ctx.stroke();
 
-            // ── Nucleus ──
-            if (sr > 10) {
-                const nR = sr * 0.22;
-                const nX = sx + sr * 0.1;
-                const nY = sy - sr * 0.1;
-                // Nucleus body
-                ctx.beginPath();
-                ctx.arc(nX, nY, nR, 0, Math.PI * 2);
-                ctx.fillStyle = this.color + '50';
-                ctx.fill();
-                ctx.strokeStyle = this.color + 'aa';
-                ctx.lineWidth = Math.max(1, nR * 0.2);
-                ctx.stroke();
-                // Nucleolus (tiny bright dot inside nucleus)
-                ctx.beginPath();
-                ctx.arc(nX - nR * 0.2, nY - nR * 0.2, nR * 0.35, 0, Math.PI * 2);
-                ctx.fillStyle = this.color + 'dd';
-                ctx.fill();
+            // ── Internal granules (storage bodies inside bacteria) ──
+            if (sr > 8) {
+                const granuleCount = Math.min(5, 2 + Math.floor(sr / 18));
+                for (let g = 0; g < granuleCount; g++) {
+                    const ga = (g / granuleCount) * Math.PI * 2 + seed;
+                    const gx = Math.cos(ga) * sr * elongation * 0.38;
+                    const gy = Math.sin(ga) * sr * 0.28;
+                    const gr = sr * (0.08 + 0.06 * Math.sin(g * 2.3 + seed));
+                    ctx.beginPath();
+                    ctx.arc(gx, gy, gr, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color + '55';
+                    ctx.fill();
+                }
             }
+
+            // ── Septum line (cell division mark, center) ──
+            if (sr > 12) {
+                ctx.beginPath();
+                ctx.moveTo(0, -sr * 0.72);
+                ctx.lineTo(0, sr * 0.72);
+                ctx.strokeStyle = this.color + '33';
+                ctx.lineWidth = Math.max(0.5, sr * 0.035);
+                ctx.stroke();
+            }
+
+            ctx.restore();
 
             // ── Name and mass text ──
             if (sr > 15) {
                 ctx.fillStyle = '#fff';
-                ctx.font = `bold ${Math.max(10, sr * 0.45)}px Orbitron, monospace`;
+                ctx.font = `bold ${Math.max(10, sr * 0.38)}px Orbitron, monospace`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(this.name, sx, sy + sr * 0.05);
-
+                ctx.fillText(this.name, sx, sy);
                 ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.font = `${Math.max(8, sr * 0.3)}px Rajdhani, sans-serif`;
-                ctx.fillText(Math.floor(c.mass), sx, sy + sr * 0.38);
+                ctx.font = `${Math.max(8, sr * 0.26)}px Rajdhani, sans-serif`;
+                ctx.fillText(Math.floor(c.mass), sx, sy + sr * 0.42);
             }
         }
     }

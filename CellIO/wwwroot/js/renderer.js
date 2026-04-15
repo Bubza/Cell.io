@@ -24,7 +24,7 @@ export function clearCanvas(ctx, W, H) {
         ctx.fillRect(0, 0, W, H);
         try {
             if (petriImg.naturalWidth > 0) {
-                const scale = Math.max(W / petriImg.naturalWidth, H / petriImg.naturalHeight) * 1.4;
+                const scale = Math.max(W / petriImg.naturalWidth, H / petriImg.naturalHeight) * 1.8;
                 const dw = petriImg.naturalWidth * scale;
                 const dh = petriImg.naturalHeight * scale;
                 ctx.drawImage(petriImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
