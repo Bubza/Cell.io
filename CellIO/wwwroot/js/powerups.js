@@ -7,7 +7,7 @@ import { WORLD_SIZE } from './utils.js';
 export const POWERUP_TYPES = {
     speed: { color: '#ffd32a', icon: '⚡', label: 'SPEED BOOST', duration: 5000 },
     shield: { color: '#00f0ff', icon: '🛡', label: 'SHIELD', duration: 6000 },
-    toxin: { color: '#5aff8a', icon: '☠', label: 'TOXIN CLOUD', duration: 4000 },
+    toxin: { color: '#5aff8a', icon: '☣', label: 'TOXIN CLOUD', duration: 4000 },
 };
 
 export function createPowerup() {
@@ -38,31 +38,48 @@ export function drawPowerups(ctx, powerups, cam, W, H) {
         const sx = (p.x - cam.x) * cam.zoom + W / 2;
         const sy = (p.y - cam.y) * cam.zoom + H / 2;
         const sr = p.radius * cam.zoom;
-        if (sx + sr < -50 || sx - sr > W + 50 || sy + sr < -50 || sy - sr > H + 50) continue;
+        if (sx + sr * 2 < -50 || sx - sr * 2 > W + 50 || sy + sr * 2 < -50 || sy - sr * 2 > H + 50) continue;
 
         const def = POWERUP_TYPES[p.type];
-        const pulse = 1 + 0.15 * Math.sin(now * 3 + p.pulse);
+        const pulse = 1 + 0.18 * Math.sin(now * 3 + p.pulse);
+        const rot = now * 1.2 + p.pulse;
 
-        // Outer ring glow
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(rot);
+
+        // Outer glow
         ctx.beginPath();
-        ctx.arc(sx, sy, sr * 1.5 * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = def.color + '22';
+        ctx.arc(0, 0, sr * 2 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = def.color + '18';
         ctx.fill();
 
-        // Main circle
+        // Diamond shape
+        const ds = sr * 1.1 * pulse;
         ctx.beginPath();
-        ctx.arc(sx, sy, sr * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = def.color + 'cc';
+        ctx.moveTo(0, -ds);
+        ctx.lineTo(ds * 0.6, 0);
+        ctx.lineTo(0, ds);
+        ctx.lineTo(-ds * 0.6, 0);
+        ctx.closePath();
+        ctx.fillStyle = def.color + 'dd';
         ctx.fill();
-        ctx.strokeStyle = def.color;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Icon text
-        ctx.font = `${Math.max(10, sr * 1.0)}px serif`;
+        ctx.restore();
+
+        // Icon drawn upright (not rotated)
+        ctx.font = `${Math.max(10, sr * 1.1)}px serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(def.icon, sx, sy);
+
+        // Type label below
+        ctx.fillStyle = def.color;
+        ctx.font = `bold ${Math.max(7, sr * 0.6)}px Orbitron, monospace`;
+        ctx.fillText(def.label, sx, sy + sr * 1.6);
     }
 }
 

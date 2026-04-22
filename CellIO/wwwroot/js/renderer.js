@@ -338,7 +338,7 @@ export function drawParticles(ctx, particles, cam, W, H) {
  * @param {number} W - Main canvas width
  * @param {number} H - Main canvas height
  */
-export function drawMinimap(mmCtx, player, bots, food, cam, W, H) {
+export function drawMinimap(mmCtx, player, bots, food, powerups, cam, W, H) {
     mmCtx.fillStyle = 'rgba(240, 240, 240, 0.95)';
     mmCtx.fillRect(0, 0, 160, 160);
 
@@ -348,6 +348,23 @@ export function drawMinimap(mmCtx, player, bots, food, cam, W, H) {
     mmCtx.fillStyle = 'rgba(160, 160, 160, 0.4)';
     for (const f of food) {
         mmCtx.fillRect(f.x * scale, f.y * scale, 1, 1);
+    }
+
+    // Power-ups — bright colored diamonds
+    const puColors = { speed: '#ffd32a', shield: '#00f0ff', toxin: '#5aff8a' };
+    for (const p of (powerups || [])) {
+        const px = p.x * scale, py = p.y * scale, ps = 5;
+        mmCtx.beginPath();
+        mmCtx.moveTo(px, py - ps);
+        mmCtx.lineTo(px + ps, py);
+        mmCtx.lineTo(px, py + ps);
+        mmCtx.lineTo(px - ps, py);
+        mmCtx.closePath();
+        mmCtx.fillStyle = puColors[p.type] || '#fff';
+        mmCtx.fill();
+        mmCtx.strokeStyle = '#333';
+        mmCtx.lineWidth = 0.8;
+        mmCtx.stroke();
     }
 
     // Bots

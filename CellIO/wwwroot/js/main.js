@@ -164,15 +164,24 @@ function checkCollisions() {
                             player.killCount++;
                         }
                     } else if (bc.mass > pc.mass * 1.15) {
-                        // Bot eats player cell
-                        bc.mass += pc.mass;
-                        spawnParticles(particles, pc.x, pc.y, player.color, 8);
-                        playSound('death');
-                        pc.mass = 0;
-                        player.cells = player.cells.filter(c => c.mass > 0);
-                        if (player.cells.length === 0) {
-                            gameOver();
-                            return;
+                        // Bot eats player cell — blocked by shield
+                        if (hasEffect(activeEffects, 'shield')) {
+                            // Shield absorbs the hit — push bot away
+                            const dx = pc.x - bc.x, dy = pc.y - bc.y;
+                            const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                            bc.x -= (dx / d) * 10; bc.y -= (dy / d) * 10;
+                            // Flash effect
+                            spawnParticles(particles, pc.x, pc.y, '#00f0ff', 6);
+                        } else {
+                            bc.mass += pc.mass;
+                            spawnParticles(particles, pc.x, pc.y, player.color, 8);
+                            playSound('death');
+                            pc.mass = 0;
+                            player.cells = player.cells.filter(c => c.mass > 0);
+                            if (player.cells.length === 0) {
+                                gameOver();
+                                return;
+                            }
                         }
                     }
                 }
@@ -361,10 +370,22 @@ function gameLoop() {
     // ── Update particles ──
     updateParticles(particles);
 
-    // ── Update power-ups ──
+    // ── Toxin cloud: slow nearby bots ──
+    if (hasEffect(activeEffects, 'toxin')) {
+        const toxinRange = 200;
+        for (const bot of bots) {
+            if (!bot.alive) continue;
+            if (Math.hypot(bot.x - player.centerX, bot.y - player.centerY) < toxinRange) {
+                // Push bot away slowly and shrink slightly
+                const dx = bot.x - player.centerX, dy = bot.y - player.centerY;
+                const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                bot.x += (dx / d) * 1.2; bot.y += (dy / d) * 1.2;
+                for (const bc of bot.cells) bc.mass = Math.max(10, bc.mass * 0.998);
+            }
+        }
+    }
     updatePowerups(powerups, dt);
-    // Spawn powerups more frequently
-    if (Math.random() < 0.004 && powerups.length < 6) powerups.push(createPowerup());
+    if (Math.random() < 0.012 && powerups.length < 12) powerups.push(createPowerup());
 
     // ── Update eat animations ──
     for (let i = eatAnimations.length - 1; i >= 0; i--) {
@@ -459,7 +480,7 @@ function gameLoop() {
 
     // Update HUD elements
     updateHUD();
-    drawMinimap(mmCtx, player, bots, food, camera, W, H);
+    drawMinimap(mmCtx, player, bots, food, powerups, camera, W, H);
 
     animFrame = requestAnimationFrame(gameLoop);
 }
@@ -476,7 +497,7 @@ window.startGame = function () {
     const nameInput = document.getElementById('player-name').value.trim() || 'Player';
 
     powerups = [];
-    for (let i = 0; i < 4; i++) powerups.push(createPowerup());
+    for (let i = 0; i < 8; i++) powerups.push(createPowerup());
     activeEffects = {};
     eatAnimations = [];
     screenShake = 0;
