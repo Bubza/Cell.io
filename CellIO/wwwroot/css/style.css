@@ -578,3 +578,78 @@ canvas#gameCanvas {
         outline: 2px solid #fff;
         outline-offset: 2px;
     }
+
+/* ── Game mode picker ── */
+.mode-picker {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.mode-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.mode-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 8px 14px;
+    border: 1px solid var(--text-dim);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+    .mode-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .mode-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(0,240,255,0.1);
+        box-shadow: 0 0 12px rgba(0,240,255,0.2);
+    }
+
+.mode-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    max-width: 320px;
+    text-align: center;
+}
+
+/* ── Game over stats ── */
+.go-stats {
+    display: flex;
+    gap: 32px;
+    margin: 12px 0 20px;
+}
+
+.go-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.go-score.gold {
+    background: linear-gradient(135deg, #ffd32a, #ffa726);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.go-mode-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent3);
+    margin-bottom: 4px;
+}

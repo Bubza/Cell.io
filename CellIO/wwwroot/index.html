@@ -62,6 +62,16 @@
                autocomplete="off" />
         <button class="btn" id="btn-play" onclick="startGame()">PLAY</button>
 
+        <div class="mode-picker">
+            <div class="bg-picker-label">GAME MODE</div>
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="classic" onclick="selectMode(this)">🧫 CLASSIC</button>
+                <button class="mode-btn" data-mode="timeattack" onclick="selectMode(this)">⏱ TIME ATTACK</button>
+                <button class="mode-btn" data-mode="survival" onclick="selectMode(this)">🌊 SURVIVAL</button>
+            </div>
+            <div class="mode-desc" id="mode-desc">Grow as large as possible. No time limit.</div>
+        </div>
+
         <div class="color-picker">
             <div class="bg-picker-label">CELL COLOR</div>
             <div class="color-swatches">
@@ -91,9 +101,22 @@
 
     <!-- ═══ GAME OVER SCREEN ═══ -->
     <div class="screen-overlay hidden" id="screen-gameover">
+        <div class="go-mode-label" id="go-mode">CLASSIC</div>
         <div class="subtitle">You Were Consumed</div>
-        <div class="go-score" id="go-score">0</div>
-        <div class="go-label">Final Score</div>
+        <div class="go-stats">
+            <div class="go-stat">
+                <div class="go-score" id="go-score">0</div>
+                <div class="go-label">Score</div>
+            </div>
+            <div class="go-stat">
+                <div class="go-score gold" id="go-highscore">0</div>
+                <div class="go-label">🏆 Best</div>
+            </div>
+            <div class="go-stat">
+                <div class="go-score" id="go-kills">0</div>
+                <div class="go-label">Kills</div>
+            </div>
+        </div>
         <button class="btn pink" onclick="restartGame()">PLAY AGAIN</button>
         <button class="btn" onclick="backToMenu()">MENU</button>
     </div>
@@ -127,9 +150,27 @@
             forest: 'background: radial-gradient(circle, #0d3318, #071a0d); box-shadow: 0 0 0 2px rgba(90,255,138,0.7)',
         };
 
+        window.selectedGameMode = 'classic';
         window.selectedCellColor = '#00f0ff';
 
+        const MODE_DESCS = {
+            classic: 'Grow as large as possible. No time limit.',
+            timeattack: 'Score as much as you can in 90 seconds!',
+            survival: 'Survive waves of increasingly powerful bots.',
+        };
+
+        window.selectMode = function (btn) {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window.selectedGameMode = btn.dataset.mode;
+            document.getElementById('mode-desc').textContent = MODE_DESCS[btn.dataset.mode];
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
+            // Load saved high score
+            const saved = localStorage.getItem('cellioHighScore');
+            if (saved) document.getElementById('go-highscore').textContent = parseInt(saved).toLocaleString();
+
             document.querySelectorAll('.bg-swatch').forEach(s => {
                 const theme = s.dataset.theme;
                 s.style.cssText = SWATCH_STYLES[theme] || '';

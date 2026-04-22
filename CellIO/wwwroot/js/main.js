@@ -29,6 +29,7 @@
 import { Player } from './player.js';
 import { Bot } from './enemy.js';
 import { createFood, createFoodItem, createViruses, respawnVirus, spawnParticles, updateParticles } from './food.js';
+import { createPowerup, updatePowerups, drawPowerups, applyPowerup, hasEffect, drawEffectsHUD, POWERUP_TYPES } from './powerups.js';
 import { clearCanvas, drawGrid, drawWorldBorder, drawFood, drawViruses, drawParticles, drawMinimap } from './renderer.js';
 import { initAudio, startDrone, stopDrone, muteDrone, unmuteDrone, toggleSound, isSoundEnabled, playSound } from './audio.js';
 import {
@@ -63,6 +64,16 @@ let viruses = [];
 let particles = [];
 let animFrame = null;
 
+// ── Power-ups & game mode ──
+let powerups = [];
+let activeEffects = {};  // { speed: {expiresAt}, shield: {expiresAt}, toxin: {expiresAt} }
+let gameMode = 'classic';   // 'classic' | 'timeattack' | 'survival'
+let modeTimer = 0;          // ms remaining for timed modes
+let survivalWave = 0;
+let screenShake = 0;        // frames of shake remaining
+let eatAnimations = [];     // { x, y, r, life, color }
+let globalHighScore = parseInt(localStorage.getItem('cellioHighScore') || '0');
+
 // ═══════════════════════════════════════════════════════════════════
 // COLLISION DETECTION
 // ═══════════════════════════════════════════════════════════════════
@@ -78,9 +89,25 @@ function checkCollisions() {
                 c.mass += f.mass;
                 player.addScore(f.mass);
                 spawnParticles(particles, f.x, f.y, f.color, 3);
+                // Eat animation
+                eatAnimations.push({ x: f.x, y: f.y, r: cr * 0.5, life: 1, color: f.color });
                 playSound('eat');
                 food[i] = createFoodItem();
             }
+        }
+    }
+
+    // ── Player picks up power-ups ──
+    for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        const cr = massToRadius(player.cells[0]?.mass || 20);
+        if (dist(player, p) < cr + p.radius) {
+            applyPowerup(player, p.type, activeEffects);
+            spawnParticles(particles, p.x, p.y, POWERUP_TYPES[p.type].color, 15);
+            playSound('eat');
+            // Show pickup label
+            eatAnimations.push({ x: p.x, y: p.y, r: 30, life: 1, color: POWERUP_TYPES[p.type].color, label: POWERUP_TYPES[p.type].label });
+            powerups.splice(i, 1);
         }
     }
 
@@ -90,6 +117,7 @@ function checkCollisions() {
         for (const v of viruses) {
             if (c.mass > v.mass && dist(c, v) < cr + v.radius) {
                 playSound('virus');
+                screenShake = 18;
                 const pieces = Math.min(8 - player.cells.length, 4);
                 if (pieces > 0) {
                     const shareMass = c.mass / (pieces + 1);
@@ -302,7 +330,15 @@ function gameLoop() {
         const worldMouseY = (mouseY - H / 2) / camera.zoom + camera.y;
         player.update(worldMouseX, worldMouseY, dt);
 
-        // Camera smoothly follows player
+        // Speed boost: temporarily increase BASE_SPEED via cell vx/vy nudge
+        if (hasEffect(activeEffects, 'speed')) {
+            for (const c of player.cells) {
+                const dx = worldMouseX - c.x, dy = worldMouseY - c.y;
+                const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                c.x += (dx / d) * 2.5; c.y += (dy / d) * 2.5;
+            }
+        }
+
         camera.x = lerp(camera.x, player.centerX, 0.08);
         camera.y = lerp(camera.y, player.centerY, 0.08);
         camera.targetZoom = player.getTargetZoom();
@@ -325,12 +361,57 @@ function gameLoop() {
     // ── Update particles ──
     updateParticles(particles);
 
+    // ── Update power-ups ──
+    updatePowerups(powerups, dt);
+    // Spawn powerups more frequently
+    if (Math.random() < 0.004 && powerups.length < 6) powerups.push(createPowerup());
+
+    // ── Update eat animations ──
+    for (let i = eatAnimations.length - 1; i >= 0; i--) {
+        eatAnimations[i].life -= 0.04;
+        eatAnimations[i].r += 0.8;
+        if (eatAnimations[i].life <= 0) eatAnimations.splice(i, 1);
+    }
+
+    // ── Game mode timer ──
+    if (gameMode === 'timeattack' && gameRunning) {
+        modeTimer -= 16;
+        if (modeTimer <= 0) { gameOver(); return; }
+    }
+    if (gameMode === 'survival' && gameRunning) {
+        modeTimer -= 16;
+        if (modeTimer <= 0) {
+            survivalWave++;
+            modeTimer = 30000;
+            // Spawn extra bots each wave
+            for (let i = 0; i < survivalWave * 2; i++) {
+                let x, y;
+                do { x = Math.random() * WORLD_SIZE; y = Math.random() * WORLD_SIZE; }
+                while (Math.hypot(x - player.x, y - player.y) < 600);
+                const bot = new Bot(x, y, START_MASS + Math.random() * 80 + survivalWave * 20, randomColor(), randomName());
+                bot.setWorldRefs(player, bots, food);
+                bots.push(bot);
+            }
+        }
+    }
+
+    // ── Screen shake ──
+    let shakeX = 0, shakeY = 0;
+    if (screenShake > 0) {
+        shakeX = (Math.random() - 0.5) * screenShake * 0.6;
+        shakeY = (Math.random() - 0.5) * screenShake * 0.6;
+        screenShake--;
+    }
+
     // ── RENDER ──
     clearCanvas(ctx, W, H);
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
     drawGrid(ctx, camera, W, H);
     drawWorldBorder(ctx, camera, W, H);
     drawFood(ctx, food, camera, W, H);
     drawViruses(ctx, viruses, camera, W, H);
+    drawPowerups(ctx, powerups, camera, W, H);
     drawParticles(ctx, particles, camera, W, H);
 
     // Draw bots
@@ -341,6 +422,39 @@ function gameLoop() {
     // Draw player on top
     if (player && player.alive) {
         player.draw(ctx, camera, W, H);
+    }
+
+    // Draw eat animations (expanding ring on eat)
+    for (const ea of eatAnimations) {
+        const sx = (ea.x - camera.x) * camera.zoom + W / 2;
+        const sy = (ea.y - camera.y) * camera.zoom + H / 2;
+        const alpha = Math.floor(ea.life * 180).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(sx, sy, ea.r * camera.zoom, 0, Math.PI * 2);
+        ctx.strokeStyle = ea.color + alpha;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        if (ea.label) {
+            ctx.fillStyle = ea.color + alpha;
+            ctx.font = 'bold 13px Orbitron, monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(ea.label, sx, sy - ea.r * camera.zoom - 14);
+        }
+    }
+
+    ctx.restore();
+
+    // Draw active effects HUD
+    drawEffectsHUD(ctx, activeEffects, W, H);
+
+    // Draw mode timer HUD
+    if (gameMode !== 'classic' && gameRunning) {
+        const secs = Math.ceil(modeTimer / 1000);
+        ctx.fillStyle = secs < 10 ? '#ff2d75' : '#ffd32a';
+        ctx.font = 'bold 22px Orbitron, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(gameMode === 'timeattack' ? `⏱ ${secs}s` : `🌊 WAVE ${survivalWave + 1} — ${secs}s`, W / 2, 90);
     }
 
     // Update HUD elements
@@ -360,6 +474,15 @@ window.startGame = function () {
     startDrone();
 
     const nameInput = document.getElementById('player-name').value.trim() || 'Player';
+
+    powerups = [];
+    for (let i = 0; i < 4; i++) powerups.push(createPowerup());
+    activeEffects = {};
+    eatAnimations = [];
+    screenShake = 0;
+    gameMode = window.selectedGameMode || 'classic';
+    modeTimer = gameMode === 'timeattack' ? 90000 : gameMode === 'survival' ? 30000 : 0;
+    survivalWave = 0;
 
     // Create player at world center
     player = new Player(WORLD_SIZE / 2, WORLD_SIZE / 2, nameInput, window.selectedCellColor || '#00f0ff');
@@ -414,11 +537,30 @@ function gameOver() {
     stopDrone();
 
     const stats = player.die();
+
+    // Save global high score
+    if (stats.score > globalHighScore) {
+        globalHighScore = stats.score;
+        localStorage.setItem('cellioHighScore', globalHighScore);
+    }
+
+    // Death burst animation
+    for (let i = 0; i < 20; i++) {
+        const angle = (i / 20) * Math.PI * 2;
+        const speed = 2 + Math.random() * 5;
+        particles.push({
+            x: player.centerX, y: player.centerY,
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            life: 1, color: player.color, radius: 4 + Math.random() * 8
+        });
+    }
+
     document.getElementById('go-score').textContent = stats.score.toLocaleString();
+    document.getElementById('go-highscore').textContent = globalHighScore.toLocaleString();
+    document.getElementById('go-kills').textContent = stats.killCount;
+    document.getElementById('go-mode').textContent = gameMode.toUpperCase();
     document.getElementById('screen-gameover').classList.remove('hidden');
     document.getElementById('hud').classList.add('hidden');
-
-    // EVENT 19: Custom gameOver event
     window.dispatchEvent(new CustomEvent('gameOver', { detail: stats }));
 }
 
